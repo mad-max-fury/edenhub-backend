@@ -4,13 +4,20 @@ import Role from './Role';
 export const DOCUMENT_NAME = 'User';
 export const COLLECTION_NAME = 'users';
 
+enum Gender {
+  MALE = 'Male',
+  FEMALE = 'Female',
+  OTHER = 'Other',
+}
+
 export default interface User {
   _id: Types.ObjectId;
-  fullname?: string;
+  name?: string;
   profilePicUrl?: string;
   email?: string;
   password?: string;
   roles: Role[];
+  gender: string;
   verified?: boolean;
   status?: boolean;
   createdAt?: Date;
@@ -19,7 +26,7 @@ export default interface User {
 
 const schema = new Schema<User>(
   {
-    fullname: {
+    name: {
       type: Schema.Types.String,
       trim: true,
       maxlength: 200,
@@ -48,6 +55,12 @@ const schema = new Schema<User>(
       ],
       required: true,
       select: false,
+    },
+    gender: {
+      type: Schema.Types.String,
+      required: true,
+      enum: Object.values(Gender),
+      default: 'Other',
     },
     verified: {
       type: Schema.Types.Boolean,
