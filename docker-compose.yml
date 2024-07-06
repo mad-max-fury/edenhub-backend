@@ -16,6 +16,9 @@ services:
     ports:
       # This maps port from .env on the host to same port number on the container.
       - '$PORT:$PORT'
+    volumes:
+      - .:/home/node/app:delegated
+      - /home/node/app/node_modules
     links:
       - mongo
     depends_on:

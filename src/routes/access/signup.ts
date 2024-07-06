@@ -12,6 +12,7 @@ import asyncHandler from '../../helpers/asyncHandler';
 import bcrypt from 'bcrypt';
 import { RoleCode } from '../../database/model/Role';
 import { getUserData } from './utils';
+import { sendWelcomeEmail } from '../../services/mail/welcomeMail';
 
 const router = express.Router();
 
@@ -44,7 +45,12 @@ router.post(
       keystore.secondaryKey,
     );
     const userData = await getUserData(createdUser);
-
+    if (userData && userData.email && userData.name) {
+      // Ensure userData.email is defined
+      await sendWelcomeEmail(userData.email, userData.name);
+    } else {
+      console.error('User data or email is undefined:', userData.name);
+    }
     new SuccessResponse('Signup Successful', {
       user: userData,
       tokens: tokens,
