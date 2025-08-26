@@ -3,8 +3,9 @@ const GoogleStrategy = require("passport-google-oauth20").Strategy;
 import AppError from "../errors/appError";
 import config from "config";
 import { User } from "../models/user.model";
-import { createUser, findOneUser, getUserById } from "../services/user.service";
+import { findOneUser, getUserById } from "../services/user.service";
 import log from "../utils/logger";
+import { createUser } from "../services/auth.service";
 
 passport.use(
   new GoogleStrategy(
