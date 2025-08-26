@@ -1,40 +1,41 @@
 import express from "express";
 import validateResource from "../middlewares/validateResource";
-import { createUserSchema } from "../schemas/user.schemas";
-import { createUserhandler } from "../controllers/user.controller";
-import passport from "passport";
+import auth from "../middlewares/auth";
+import {
+  loginSchema,
+  forgotPasswordSchema,
+  resetPasswordSchema,
+  createUserSchema,
+} from "../schemas/auth.schemas";
+import {
+  createUserHandler,
+  loginHandler,
+  generateVerificationCodeHandler,
+  resetPasswordHandler,
+  refreshTokenHandler,
+  logoutHandler,
+} from "../controllers/auth.controller";
 
 const router = express.Router();
 
-// User signup route
-router.post("/signup", validateResource(createUserSchema), createUserhandler);
+router.post("/signup", validateResource(createUserSchema), createUserHandler);
 
-// Google authentication route
-router.get(
-  "/google",
-  passport.authenticate("google", {
-    scope: ["email", "profile"],
-  })
+router.post("/login", validateResource(loginSchema), loginHandler);
+
+router.post(
+  "/forgot-password",
+  validateResource(forgotPasswordSchema),
+  generateVerificationCodeHandler
 );
 
-// Google authentication callback route
-router.get(
-  "/google/callback",
-  passport.authenticate("google", {
-    failureRedirect: "/?fd=failed",
-  }),
-  (req, res) => {
-    res.redirect("http://localhost:3000/api/auth/profile");
-  }
+router.patch(
+  "/reset-password",
+  validateResource(resetPasswordSchema),
+  resetPasswordHandler
 );
 
-// User profile route
-router.get("/profile", (req, res) => {
-  if (req.isAuthenticated()) {
-    res.render("profile", { user: req.user });
-  } else {
-    res.redirect("/");
-  }
-});
+router.post("/refresh-token", refreshTokenHandler);
+
+router.post("/logout", auth, logoutHandler);
 
 export default router;

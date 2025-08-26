@@ -25,16 +25,12 @@ passport.use(
       };
 
       try {
-        let user: any = await findOneUser({ email: newUser.email });
+        let user = await findOneUser({ email: newUser.email });
 
-        if (user?.email) {
+        if (user) {
           return done(null, user);
         } else {
           user = await createUser(newUser);
-
-          if (user?.status === "failed") {
-            return done(new AppError(user?.message, 500));
-          }
 
           return done(null, user);
         }

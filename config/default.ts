@@ -14,5 +14,8 @@ export default {
   emailHostPort: process.env.EMAIL_HOST_PORT,
   emailFrom: process.env.EMAIL_FROM,
   sendgridApiKey: process.env.SENDGRID_API_KEY,
-  logLevel: "info",
+  jwtExpiresIn: process.env.jwtExpiresIn,
+  jwtRefreshExpiresIn: process.env.jwtRefreshExpiresIn,
+  jwtRefreshExpirationInterval: process.env.jwtRefreshExpirationInterval,
+  logLevel: process.env.logLevel,
 };

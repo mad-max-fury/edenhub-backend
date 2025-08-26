@@ -13,33 +13,29 @@ const passportSetup = require("./lib/passport");
 
 const app = express();
 
-//body parser
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
-// express session
 app.use(
   session({
     secret: config.get<string>("sessionSecret"),
     resave: false,
     saveUninitialized: false,
     cookie: {
-      maxAge: 1000 * 60 * 60 * 24 * 2, // 2 days expiration time
+      maxAge: 1000 * 60 * 60 * 24 * 2,
     },
   })
 );
 
-// Passport middleware
 app.use(passport.initialize());
 app.use(passport.session());
 
-// app routes
 app.use(router);
-// catch all routes
+
 app.all("**", (req, res, next) => {
   next(new AppError(`Can't find ${req.originalUrl} on this server!`, 404));
 });
-// Global Error Handling Middleware
+
 app.use(appErrorHandler);
 const PORT = config.get("port");
 

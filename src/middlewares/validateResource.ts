@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from "express";
-import logger from "../utils/logger";
-import { AnyZodObject } from "zod";
+import { AnyZodObject, ZodError } from "zod";
+import AppError from "../errors/appError";
 
 const validate =
   (schema: AnyZodObject) =>
@@ -12,13 +12,14 @@ const validate =
         params: req.params,
       });
       next();
-    } catch (e: any) {
-
-      const message = JSON.parse(e.message).map((error: any) => error.message);
-      return res.status(417).send({
-        staus: "failed",
-        message: message || "Invalid or Incomplete request body",
-      });
+    } catch (e) {
+      if (e instanceof ZodError) {
+        const errors = e.errors.map((error) => error.message);
+        const message =
+          errors.join(", ") || "Invalid or incomplete request body";
+        return next(new AppError(message, 417));
+      }
+      return next(e);
     }
   };
 
