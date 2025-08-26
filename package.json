@@ -2,7 +2,7 @@
   "name": "edenhub-backend",
   "version": "1.0.0",
   "description": "An ecommerce server that powers edenhub",
-  "main": "index.js",
+  "main": "dist/index.js",
   "scripts": {
     "start": "node ./dist/index.js",
     "dev": "ts-node-dev --respawn --transpile-only src/index.ts",
