@@ -19,7 +19,11 @@ const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
 const config_1 = __importDefault(require("config"));
 const argon2_1 = __importDefault(require("argon2"));
 const signToken = (userId, expiresIn) => {
-    return jsonwebtoken_1.default.sign({ id: userId }, config_1.default.get("jwtSecret"), {
+    const secret = config_1.default.get("jwtSecret");
+    if (!secret) {
+        throw new appError_1.default("JWT secret not configured", 500);
+    }
+    return jsonwebtoken_1.default.sign({ id: userId }, secret, {
         expiresIn,
     });
 };
@@ -37,8 +41,10 @@ const loginUser = (email, password) => __awaiter(void 0, void 0, void 0, functio
     const isPasswordMatch = yield user.comparePassword(password);
     if (!isPasswordMatch)
         throw new appError_1.default("Invalid email or password", 401);
-    const accessToken = (0, exports.signToken)(user.id, config_1.default.get("jwtExpiresIn"));
-    const refreshToken = (0, exports.signToken)(user.id, config_1.default.get("jwtRefreshExpiresIn"));
+    const jwtExpiresIn = config_1.default.get("jwtExpiresIn");
+    const jwtRefreshExpiresIn = config_1.default.get("jwtRefreshExpiresIn");
+    const accessToken = (0, exports.signToken)(user.id, jwtExpiresIn);
+    const refreshToken = (0, exports.signToken)(user.id, jwtRefreshExpiresIn);
     return { user: user.toJson(), accessToken, refreshToken };
 });
 exports.loginUser = loginUser;
@@ -72,19 +78,26 @@ exports.generateVerificationCode = generateVerificationCode;
 // 🔑 Refresh token
 const refreshAccessToken = (token) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        const decoded = jsonwebtoken_1.default.verify(token, config_1.default.get("jwtSecret"));
+        const secret = config_1.default.get("jwtSecret");
+        if (!secret) {
+            throw new appError_1.default("JWT secret not configured", 500);
+        }
+        const decoded = jsonwebtoken_1.default.verify(token, secret);
         const user = yield user_model_1.default.findById(decoded.id);
         if (!user)
             throw new appError_1.default("User not found", 404);
-        const accessToken = (0, exports.signToken)(user.id, config_1.default.get("jwtExpiresIn"));
+        const jwtExpiresIn = config_1.default.get("jwtExpiresIn");
+        const accessToken = (0, exports.signToken)(user.id, jwtExpiresIn);
         return { accessToken };
     }
     catch (err) {
-        throw new appError_1.default("Invalid refresh token", 401);
+        if (err instanceof jsonwebtoken_1.default.JsonWebTokenError) {
+            throw new appError_1.default("Invalid refresh token", 401);
+        }
+        throw err;
     }
 });
 exports.refreshAccessToken = refreshAccessToken;
-// 🔒 Change password
 const changePassword = (userId, currentPassword, newPassword) => __awaiter(void 0, void 0, void 0, function* () {
     const user = yield user_model_1.default.findById(userId).select("+password");
     if (!user)

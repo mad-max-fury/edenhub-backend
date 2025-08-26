@@ -1,11 +1,19 @@
 import UserModel, { User } from "../models/user.model";
 import AppError from "../errors/appError";
-import jwt from "jsonwebtoken";
+import jwt, { Secret } from "jsonwebtoken";
 import config from "config";
 import argon2 from "argon2";
 
-export const signToken = (userId: string, expiresIn: string) => {
-  return jwt.sign({ id: userId }, config.get<string>("jwtSecret"), {
+export const signToken = (
+  userId: string,
+  expiresIn: jwt.SignOptions["expiresIn"]
+) => {
+  const secret = config.get<string>("jwtSecret");
+  if (!secret) {
+    throw new AppError("JWT secret not configured", 500);
+  }
+
+  return jwt.sign({ id: userId }, secret as Secret, {
     expiresIn,
   });
 };
@@ -21,11 +29,13 @@ export const loginUser = async (email: string, password: string) => {
   const isPasswordMatch = await user.comparePassword(password);
   if (!isPasswordMatch) throw new AppError("Invalid email or password", 401);
 
-  const accessToken = signToken(user.id, config.get<string>("jwtExpiresIn"));
-  const refreshToken = signToken(
-    user.id,
-    config.get<string>("jwtRefreshExpiresIn")
+  const jwtExpiresIn = config.get<jwt.SignOptions["expiresIn"]>("jwtExpiresIn");
+  const jwtRefreshExpiresIn = config.get<jwt.SignOptions["expiresIn"]>(
+    "jwtRefreshExpiresIn"
   );
+
+  const accessToken = signToken(user.id, jwtExpiresIn);
+  const refreshToken = signToken(user.id, jwtRefreshExpiresIn);
 
   return { user: user.toJson(), accessToken, refreshToken };
 };
@@ -63,21 +73,30 @@ export const generateVerificationCode = async (email: string) => {
 // 🔑 Refresh token
 export const refreshAccessToken = async (token: string) => {
   try {
-    const decoded = jwt.verify(token, config.get<string>("jwtSecret")) as {
+    const secret = config.get<string>("jwtSecret");
+    if (!secret) {
+      throw new AppError("JWT secret not configured", 500);
+    }
+
+    const decoded = jwt.verify(token, secret) as {
       id: string;
     };
 
     const user = await UserModel.findById(decoded.id);
     if (!user) throw new AppError("User not found", 404);
 
-    const accessToken = signToken(user.id, config.get<string>("jwtExpiresIn"));
+    const jwtExpiresIn =
+      config.get<jwt.SignOptions["expiresIn"]>("jwtExpiresIn");
+    const accessToken = signToken(user.id, jwtExpiresIn);
     return { accessToken };
   } catch (err) {
-    throw new AppError("Invalid refresh token", 401);
+    if (err instanceof jwt.JsonWebTokenError) {
+      throw new AppError("Invalid refresh token", 401);
+    }
+    throw err;
   }
 };
 
-// 🔒 Change password
 export const changePassword = async (
   userId: string,
   currentPassword: string,
