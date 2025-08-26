@@ -1,20 +1,21 @@
 const passport = require("passport");
 const GoogleStrategy = require("passport-google-oauth20").Strategy;
 import AppError from "../errors/appError";
-import config from "config";
+
 import { User } from "../models/user.model";
 import { findOneUser, getUserById } from "../services/user.service";
 import log from "../utils/logger";
 import { createUser } from "../services/auth.service";
+import { getConfig } from "../config";
 
 passport.use(
   new GoogleStrategy(
     {
-      clientID: config.get<string>("googleClientId"),
-      clientSecret: config.get<string>("googleClientSecret"),
-      callbackURL: `http://localhost:${config.get<string>(
-        "port"
-      )}/${config.get<string>("callbackURL")}`,
+      clientID: getConfig("googleClientId"),
+      clientSecret: getConfig("googleClientSecret"),
+      callbackURL: `http://localhost:${getConfig("port")}/${getConfig(
+        "callbackURL"
+      )}`,
       scope: ["profile", "email"],
     },
     async (accessToken: any, refreshToken: any, profile: any, done: any) => {

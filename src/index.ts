@@ -1,12 +1,13 @@
 require("dotenv").config();
 
 import express from "express";
-import config from "config";
+
 import connectDocumentDB from "./db/connect";
 import log from "./utils/logger";
 import router from "./routes";
 import appErrorHandler from "./errors/appErrorHandler";
 import AppError from "./errors/appError";
+import { getConfig } from "./config";
 const session = require("express-session");
 const passport = require("passport");
 const passportSetup = require("./lib/passport");
@@ -18,7 +19,7 @@ app.use(express.urlencoded({ extended: false }));
 
 app.use(
   session({
-    secret: config.get<string>("sessionSecret"),
+    secret: getConfig("sessionSecret"),
     resave: false,
     saveUninitialized: false,
     cookie: {
@@ -37,7 +38,7 @@ app.all("**", (req, res, next) => {
 });
 
 app.use(appErrorHandler);
-const PORT = config.get("port");
+const PORT = getConfig("port");
 
 app.listen(PORT, () => {
   log.info(`Server is running on port http://localhost:${PORT}`);
