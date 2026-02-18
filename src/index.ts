@@ -8,6 +8,7 @@ import router from "./routes";
 import appErrorHandler from "./errors/appErrorHandler";
 import AppError from "./errors/appError";
 import { getConfig } from "./config";
+import { syncRouteClaims } from "./utils/syncClaims.utils";
 const session = require("express-session");
 const passport = require("passport");
 const passportSetup = require("./lib/passport");
@@ -25,13 +26,17 @@ app.use(
     cookie: {
       maxAge: 1000 * 60 * 60 * 24 * 2,
     },
-  })
+  }),
 );
 
 app.use(passport.initialize());
 app.use(passport.session());
 
 app.use(router);
+
+syncRouteClaims(app).then(() => {
+  log.info("Route claims synchronized with database.");
+});
 
 app.all("**", (req, res, next) => {
   next(new AppError(`Can't find ${req.originalUrl} on this server!`, 404));

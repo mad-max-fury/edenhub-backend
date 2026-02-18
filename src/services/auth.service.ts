@@ -7,7 +7,7 @@ import { getConfig } from "../config";
 
 export const signToken = (
   userId: string,
-  expiresIn: jwt.SignOptions["expiresIn"]
+  expiresIn: jwt.SignOptions["expiresIn"],
 ) => {
   return jwt.sign({ id: userId }, getConfig("jwtSecret") as Secret, {
     expiresIn,
@@ -19,7 +19,13 @@ export async function createUser(data: Partial<User>) {
 }
 
 export const loginUser = async (email: string, password: string) => {
-  const user = await UserModel.findOne({ email }).select("+password");
+  const user = await UserModel.findOne({ email })
+    .select("+password")
+    .populate({
+      path: "role",
+      populate: { path: "menus" },
+    });
+
   if (!user) throw new AppError("Invalid email or password", 401);
 
   const isPasswordMatch = await user.comparePassword(password);
@@ -27,14 +33,22 @@ export const loginUser = async (email: string, password: string) => {
 
   const accessToken = signToken(
     user.id,
-    getConfig("jwtExpiresIn") as jwt.SignOptions["expiresIn"]
+    getConfig("jwtExpiresIn") as jwt.SignOptions["expiresIn"],
   );
   const refreshToken = signToken(
     user.id,
-    getConfig("jwtRefreshExpiresIn") as jwt.SignOptions["expiresIn"]
+    getConfig("jwtRefreshExpiresIn") as jwt.SignOptions["expiresIn"],
   );
 
-  return { user: user.toJson(), accessToken, refreshToken };
+  const userJson = user.toJSON();
+  const menus = (user.role as any)?.menus || [];
+
+  return {
+    user: userJson,
+    menus,
+    accessToken,
+    refreshToken,
+  };
 };
 
 export const getUserProfile = async (userId: string) => {
@@ -46,7 +60,7 @@ export const getUserProfile = async (userId: string) => {
 export const resetPassword = async (
   email: string,
   newPassword: string,
-  verificationCode: string
+  verificationCode: string,
 ) => {
   const user = await UserModel.findOne({ email, verificationCode });
   if (!user) throw new AppError("Invalid verification code", 400);
@@ -79,7 +93,7 @@ export const refreshAccessToken = async (token: string) => {
 
     const accessToken = signToken(
       user.id,
-      getConfig("jwtExpiresIn") as jwt.SignOptions["expiresIn"]
+      getConfig("jwtExpiresIn") as jwt.SignOptions["expiresIn"],
     );
     return { accessToken };
   } catch (err) {
@@ -94,7 +108,7 @@ export const refreshAccessToken = async (token: string) => {
 export const changePassword = async (
   userId: string,
   currentPassword: string,
-  newPassword: string
+  newPassword: string,
 ) => {
   const user = await UserModel.findById(userId).select("+password");
   if (!user) throw new AppError("User not found", 404);

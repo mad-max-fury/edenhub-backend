@@ -10,36 +10,53 @@ import {
 import { CreateUserInputSchema } from "../schemas/auth.schemas";
 import { findOneUser } from "../services/user.service";
 import AppError from "../errors/appError";
+import { User } from "../models/user.model";
 
+/**
+ * Creates a new user.
+ * Note: Your createUser service should now be updated to assign a
+ * default "Customer" role by default.
+ */
 export const createUserHandler = catchAsync(
   async (req: Request<{}, {}, CreateUserInputSchema>, res: Response) => {
-    const body = req.body;
-    body.email = body.email.toLowerCase();
+    const { confirmPassword, ...userData } = req.body;
+    userData.email = userData.email.toLowerCase();
 
-    const existingUser = await findOneUser({ email: body.email });
+    const existingUser = await findOneUser({ email: userData.email });
     if (existingUser) throw new AppError("Email already exists", 409);
 
-    await createUser(body);
+    const user = await createUser(userData as Omit<Partial<User>, "role">);
+
     return res.status(201).json({
       status: "success",
       message: "User created successfully",
+      data: user,
     });
-  }
+  },
 );
 
-// Login
+/**
+ * Login Handler
+ * UPDATED: Now returns 'menus' associated with the user's role.
+ */
 export const loginHandler = catchAsync(async (req: Request, res: Response) => {
   const { email, password } = req.body;
 
-  const { user, accessToken, refreshToken } = await loginUser(
+  // The loginUser service should now populate the role and menus
+  const { user, menus, accessToken, refreshToken } = await loginUser(
     email.toLowerCase(),
-    password
+    password,
   );
 
   return res.status(200).json({
     status: "success",
     message: "Login successful",
-    data: { user, accessToken, refreshToken },
+    data: {
+      user,
+      menus, // Dynamic menus for frontend sidebar rendering
+      accessToken,
+      refreshToken,
+    },
   });
 });
 
@@ -48,7 +65,7 @@ export const generateVerificationCodeHandler = catchAsync(
   async (req: Request, res: Response) => {
     const { email } = req.body;
     const verificationCode = await generateVerificationCode(
-      email.toLowerCase()
+      email.toLowerCase(),
     );
 
     return res.status(200).json({
@@ -56,7 +73,7 @@ export const generateVerificationCodeHandler = catchAsync(
       message: "Verification code sent",
       data: { verificationCode },
     });
-  }
+  },
 );
 
 // Reset password
@@ -69,9 +86,14 @@ export const resetPasswordHandler = catchAsync(
       status: "success",
       message: "Password reset successful",
     });
-  }
+  },
 );
 
+/**
+ * Refresh Token Handler
+ * In a dynamic system, you might want to re-fetch the latest menus here
+ * in case the user's role permissions were updated while they were logged in.
+ */
 export const refreshTokenHandler = catchAsync(
   async (req: Request, res: Response) => {
     const { refreshToken } = req.body;
@@ -81,15 +103,15 @@ export const refreshTokenHandler = catchAsync(
       status: "success",
       data: { accessToken },
     });
-  }
+  },
 );
 
-// Logout (invalidate refresh token client-side)
+// Logout
 export const logoutHandler = catchAsync(
   async (_req: Request, res: Response) => {
     return res.status(200).json({
       status: "success",
       message: "Logged out successfully",
     });
-  }
+  },
 );
