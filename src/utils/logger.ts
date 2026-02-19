@@ -1,33 +1,59 @@
-import logger from "pino";
-import config from "config";
+import pino, { Logger } from "pino";
 import dayjs from "dayjs";
+import { getConfig } from "../config";
 
-const level = config.get<string>("logLevel") || "info";
+const isProduction = process.env.NODE_ENV === "production";
 
-const log = logger({
-  transport: {
-    target: "pino-pretty",
-    options: {
-      colorize: true,
-      levelFirst: true,
-      translateTime: "yyyy-mm-dd HH:MM:ss.l",
-      ignore: "pid,hostname",
-    },
-  },
-  base: {
-    app: "EdenHub Commerce App",
-    env: process.env.NODE_ENV || "development",
-  },
-  level,
-  timestamp: () => `,"time":"${dayjs().format("YYYY-MM-DDTHH:mm:ssZ[Z]")}"`,
-  hooks: {
-    logMethod(inputArgs, method) {
-      if (typeof inputArgs[0] === "string") {
-        inputArgs[0] = `[EdenHub]: ${inputArgs[0]}`;
-      }
-      method.apply(this, inputArgs);
-    },
-  },
-});
+class EdenLogger {
+  private static instance: Logger;
 
+  private constructor() {}
+
+  public static getInstance(): Logger {
+    if (!EdenLogger.instance) {
+      const level = getConfig("logLevel") || "info";
+
+      EdenLogger.instance = pino({
+        level,
+        transport: !isProduction
+          ? {
+              target: "pino-pretty",
+              options: {
+                colorize: true,
+                levelFirst: true,
+                translateTime: "yyyy-mm-dd HH:MM:ss.l",
+                ignore: "pid,hostname,app,env",
+              },
+            }
+          : undefined,
+
+        base: {
+          app: "EdenHub-Commerce",
+          env: process.env.NODE_ENV || "development",
+        },
+
+        timestamp: () => `,"time":"${dayjs().toISOString()}"`,
+
+        formatters: {
+          level: (label) => {
+            return { level: label.toUpperCase() };
+          },
+        },
+
+        hooks: {
+          logMethod(inputArgs, method) {
+            if (typeof inputArgs[0] === "string") {
+              inputArgs[0] = `[EdenHub] ${inputArgs[0]}`;
+            }
+            method.apply(this, inputArgs);
+          },
+        },
+      });
+    }
+
+    return EdenLogger.instance;
+  }
+}
+
+const log = EdenLogger.getInstance();
 export default log;
