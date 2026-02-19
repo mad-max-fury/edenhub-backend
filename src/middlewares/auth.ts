@@ -3,10 +3,14 @@ import jwt, { JwtPayload } from "jsonwebtoken";
 import AppError from "../errors/appError";
 import { findOneUser } from "../services/user.service";
 
+export interface UserPayload extends JwtPayload {
+  id: string;
+}
+
 declare global {
   namespace Express {
     interface Request {
-      user?: JwtPayload | string;
+      user?: UserPayload;
     }
   }
 }
@@ -25,14 +29,14 @@ const auth = async (req: Request, res: Response, next: NextFunction) => {
     }
 
     // Verify the token
-    const decoded = jwt.verify(token, secret);
-    req.user = decoded;
+    const decoded = jwt.verify(token, secret) as UserPayload;
+    req.user = { id: decoded.id };
 
     const user = await findOneUser({ _id: (decoded as JwtPayload).id });
     if (!user) {
       throw new AppError(
         "User associated with this token no longer exists.",
-        401
+        401,
       );
     }
 
@@ -43,7 +47,7 @@ const auth = async (req: Request, res: Response, next: NextFunction) => {
     }
     if (err.name === "TokenExpiredError") {
       return next(
-        new AppError("Your token has expired. Please log in again.", 401)
+        new AppError("Your token has expired. Please log in again.", 401),
       );
     }
 

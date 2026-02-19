@@ -1,11 +1,15 @@
 import UserModel, { User } from "../models/user.model";
 import AppError from "../errors/appError";
-import jwt from "jsonwebtoken";
-import config from "config";
-import argon2 from "argon2";
+import jwt, { Secret } from "jsonwebtoken";
 
-export const signToken = (userId: string, expiresIn: string) => {
-  return jwt.sign({ id: userId }, config.get<string>("jwtSecret"), {
+import argon2 from "argon2";
+import { getConfig } from "../config";
+
+export const signToken = (
+  userId: string,
+  expiresIn: jwt.SignOptions["expiresIn"],
+) => {
+  return jwt.sign({ id: userId }, getConfig("jwtSecret") as Secret, {
     expiresIn,
   });
 };
@@ -15,19 +19,36 @@ export async function createUser(data: Partial<User>) {
 }
 
 export const loginUser = async (email: string, password: string) => {
-  const user = await UserModel.findOne({ email }).select("+password");
+  const user = await UserModel.findOne({ email })
+    .select("+password")
+    .populate({
+      path: "role",
+      populate: { path: "menus" },
+    });
+
   if (!user) throw new AppError("Invalid email or password", 401);
 
   const isPasswordMatch = await user.comparePassword(password);
   if (!isPasswordMatch) throw new AppError("Invalid email or password", 401);
 
-  const accessToken = signToken(user.id, config.get<string>("jwtExpiresIn"));
+  const accessToken = signToken(
+    user.id,
+    getConfig("jwtExpiresIn") as jwt.SignOptions["expiresIn"],
+  );
   const refreshToken = signToken(
     user.id,
-    config.get<string>("jwtRefreshExpiresIn")
+    getConfig("jwtRefreshExpiresIn") as jwt.SignOptions["expiresIn"],
   );
 
-  return { user: user.toJson(), accessToken, refreshToken };
+  const userJson = user.toJSON();
+  const menus = (user.role as any)?.menus || [];
+
+  return {
+    user: userJson,
+    menus,
+    accessToken,
+    refreshToken,
+  };
 };
 
 export const getUserProfile = async (userId: string) => {
@@ -39,7 +60,7 @@ export const getUserProfile = async (userId: string) => {
 export const resetPassword = async (
   email: string,
   newPassword: string,
-  verificationCode: string
+  verificationCode: string,
 ) => {
   const user = await UserModel.findOne({ email, verificationCode });
   if (!user) throw new AppError("Invalid verification code", 400);
@@ -63,17 +84,23 @@ export const generateVerificationCode = async (email: string) => {
 // 🔑 Refresh token
 export const refreshAccessToken = async (token: string) => {
   try {
-    const decoded = jwt.verify(token, config.get<string>("jwtSecret")) as {
+    const decoded = jwt.verify(token, getConfig("jwtSecret")) as {
       id: string;
     };
 
     const user = await UserModel.findById(decoded.id);
     if (!user) throw new AppError("User not found", 404);
 
-    const accessToken = signToken(user.id, config.get<string>("jwtExpiresIn"));
+    const accessToken = signToken(
+      user.id,
+      getConfig("jwtExpiresIn") as jwt.SignOptions["expiresIn"],
+    );
     return { accessToken };
   } catch (err) {
-    throw new AppError("Invalid refresh token", 401);
+    if (err instanceof jwt.JsonWebTokenError) {
+      throw new AppError("Invalid refresh token", 401);
+    }
+    throw err;
   }
 };
 
@@ -81,7 +108,7 @@ export const refreshAccessToken = async (token: string) => {
 export const changePassword = async (
   userId: string,
   currentPassword: string,
-  newPassword: string
+  newPassword: string,
 ) => {
   const user = await UserModel.findById(userId).select("+password");
   if (!user) throw new AppError("User not found", 404);

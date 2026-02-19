@@ -1,9 +1,9 @@
 import { connect } from "mongoose";
 import logger from "../utils/logger";
-import config from "config";
+import { getConfig } from "../config";
 
 async function connectDocumentDB() {
-  const dbUri = config.get<string>("dbUri");
+  const dbUri = getConfig("dbUri");
   try {
     await connect(dbUri);
     logger.info("DocumentDB Connected!");
