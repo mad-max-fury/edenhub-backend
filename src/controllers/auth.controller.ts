@@ -12,11 +12,6 @@ import { findOneUser } from "../services/user.service";
 import AppError from "../errors/appError";
 import { User } from "../models/user.model";
 
-/**
- * Creates a new user.
- * Note: Your createUser service should now be updated to assign a
- * default "Customer" role by default.
- */
 export const createUserHandler = catchAsync(
   async (req: Request<{}, {}, CreateUserInputSchema>, res: Response) => {
     const { confirmPassword, ...userData } = req.body;
@@ -35,14 +30,9 @@ export const createUserHandler = catchAsync(
   },
 );
 
-/**
- * Login Handler
- * UPDATED: Now returns 'menus' associated with the user's role.
- */
 export const loginHandler = catchAsync(async (req: Request, res: Response) => {
   const { email, password } = req.body;
 
-  // The loginUser service should now populate the role and menus
   const { user, menus, accessToken, refreshToken } = await loginUser(
     email.toLowerCase(),
     password,
@@ -53,14 +43,13 @@ export const loginHandler = catchAsync(async (req: Request, res: Response) => {
     message: "Login successful",
     data: {
       user,
-      menus, // Dynamic menus for frontend sidebar rendering
+      menus,
       accessToken,
       refreshToken,
     },
   });
 });
 
-// Forgot password → generate code
 export const generateVerificationCodeHandler = catchAsync(
   async (req: Request, res: Response) => {
     const { email } = req.body;
@@ -76,7 +65,6 @@ export const generateVerificationCodeHandler = catchAsync(
   },
 );
 
-// Reset password
 export const resetPasswordHandler = catchAsync(
   async (req: Request, res: Response) => {
     const { email, newPassword, verificationCode } = req.body;
@@ -89,11 +77,6 @@ export const resetPasswordHandler = catchAsync(
   },
 );
 
-/**
- * Refresh Token Handler
- * In a dynamic system, you might want to re-fetch the latest menus here
- * in case the user's role permissions were updated while they were logged in.
- */
 export const refreshTokenHandler = catchAsync(
   async (req: Request, res: Response) => {
     const { refreshToken } = req.body;
@@ -106,7 +89,6 @@ export const refreshTokenHandler = catchAsync(
   },
 );
 
-// Logout
 export const logoutHandler = catchAsync(
   async (_req: Request, res: Response) => {
     return res.status(200).json({
