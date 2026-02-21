@@ -1,4 +1,3 @@
-import express from "express";
 import validateResource from "../middlewares/validateResource";
 import auth from "../middlewares/auth";
 import {
@@ -16,26 +15,79 @@ import {
   logoutHandler,
 } from "../controllers/auth.controller";
 
-const router = express.Router();
+import { createAttributeRouter } from "../utils/routeBuilder.utils";
 
-router.post("/signup", validateResource(createUserSchema), createUserHandler);
+const { router, post, patch } = createAttributeRouter();
 
-router.post("/login", validateResource(loginSchema), loginHandler);
+post(
+  "/signup",
+  {
+    resource: "Auth",
+    action: "Write",
+    group: "System Access",
+    name: "post_auth_signup",
+  },
+  validateResource(createUserSchema),
+  createUserHandler,
+);
 
-router.post(
+post(
+  "/login",
+  {
+    resource: "Auth",
+    action: "Read",
+    group: "System Access",
+    name: "post_auth_login",
+  },
+  validateResource(loginSchema),
+  loginHandler,
+);
+
+post(
   "/forgot-password",
+  {
+    resource: "Auth",
+    action: "Write",
+    group: "Account Recovery",
+    name: "post_auth_forgot_password",
+  },
   validateResource(forgotPasswordSchema),
-  generateVerificationCodeHandler
+  generateVerificationCodeHandler,
 );
 
-router.patch(
+patch(
   "/reset-password",
+  {
+    resource: "Auth",
+    action: "Write",
+    group: "Account Recovery",
+    name: "patch_auth_reset_password",
+  },
   validateResource(resetPasswordSchema),
-  resetPasswordHandler
+  resetPasswordHandler,
 );
 
-router.post("/refresh-token", refreshTokenHandler);
+post(
+  "/refresh-token",
+  {
+    resource: "Auth",
+    action: "Read",
+    group: "System Access",
+    name: "post_auth_refresh_token",
+  },
+  refreshTokenHandler,
+);
 
-router.post("/logout", auth, logoutHandler);
+post(
+  "/logout",
+  {
+    resource: "Auth",
+    action: "Write",
+    group: "System Access",
+    name: "post_auth_logout",
+  },
+  auth,
+  logoutHandler,
+);
 
 export default router;

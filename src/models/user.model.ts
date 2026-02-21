@@ -5,7 +5,6 @@ import {
   getModelForClass,
   Severity,
   DocumentType,
-  index,
   Ref,
 } from "@typegoose/typegoose";
 import argon2 from "argon2";
@@ -18,12 +17,19 @@ import { Role } from "./role.model";
   if (!this.isModified("password")) return;
   this.password = await argon2.hash(this.password);
 })
-@index({ email: 1 })
 @modelOptions({
   schemaOptions: {
     timestamps: true,
-
-    toJSON: { virtuals: true },
+    toJSON: {
+      virtuals: true,
+      transform: (doc, ret) => {
+        delete ret.password;
+        delete ret.passwordResetCode;
+        delete ret.verificationCode;
+        delete ret.__v;
+        return ret;
+      },
+    },
     toObject: { virtuals: true },
   },
   options: {
@@ -31,13 +37,13 @@ import { Role } from "./role.model";
   },
 })
 export class User {
-  @prop({ lowercase: true, required: true, unique: true })
+  @prop({ lowercase: true, required: true, unique: true, trim: true })
   email: string;
 
-  @prop({ required: true })
+  @prop({ required: true, trim: true })
   firstName: string;
 
-  @prop({ required: true })
+  @prop({ required: true, trim: true })
   lastName: string;
 
   @prop({ required: true, select: false })
@@ -71,39 +77,25 @@ export class User {
     try {
       return await argon2.verify(this.password, candidatePassword);
     } catch (error) {
-      log.error(error, "could not compare password");
+      log.error(error, "Could not compare password");
       return false;
     }
-  }
-
-  /**
-   * Fixed toJson implementation
-   * Use 'any' for the intermediate object to avoid ID property errors
-   */
-  toJson(this: DocumentType<User>) {
-    const userObject = this.toObject() as any;
-
-    delete userObject.password;
-    delete userObject.passwordResetCode;
-    delete userObject.verificationCode;
-    delete userObject.__v;
-
-    if (userObject._id) {
-      userObject.id = userObject._id.toString();
-    }
-
-    return userObject;
   }
 
   addToWishlist(this: DocumentType<User>, productId: string | Types.ObjectId) {
     const productRef =
       typeof productId === "string" ? new Types.ObjectId(productId) : productId;
-    if (!this.wishlist.some((id) => id?.toString() === productRef.toString())) {
+
+    const exists = this.wishlist.some(
+      (id) => id?.toString() === productRef.toString(),
+    );
+
+    if (!exists) {
       (this.wishlist as Types.Array<Ref<Product>>).push(productRef as any);
     }
   }
 
-  updateLastLogin(this: DocumentType<User>) {
+  async updateLastLogin(this: DocumentType<User>) {
     this.lastLogin = new Date();
     return this.save();
   }
