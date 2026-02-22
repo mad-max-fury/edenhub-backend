@@ -19,12 +19,10 @@ export const hasPermission = catchAsync(
     const currentPath = req.route.path;
     const currentMethod = req.method.toUpperCase();
 
-    // 1. Check direct permissions
     const hasDirect = role.permissions.some(
       (p: any) => p.endpoint === currentPath && p.method === currentMethod,
     );
 
-    // 2. Check group permissions
     const hasViaGroup = role.groups.some((group: any) =>
       group.permissions.some(
         (p: any) => p.endpoint === currentPath && p.method === currentMethod,

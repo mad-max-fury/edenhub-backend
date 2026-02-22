@@ -2,13 +2,30 @@ import {
   deleteUserHandler,
   getAllUsersHandler,
   getUserByIdHandler,
+  onboardUserHandler,
   updateUserHandler,
 } from "../controllers/user.controller";
 import auth from "../middlewares/auth";
 import { hasPermission } from "../middlewares/hasPermissions";
 import { createAttributeRouter } from "../utils/routeBuilder.utils";
+import validateResource from "../middlewares/validateResource";
+import { createUserSchema } from "../schemas/auth.schemas";
 
-const { router, get, patch, delete: destroy } = createAttributeRouter();
+const { router, get, post, patch, delete: destroy } = createAttributeRouter();
+
+post(
+  "/onboard",
+  {
+    resource: "User",
+    action: "Write",
+    group: "User Management",
+    name: "post_user_onboard",
+  },
+  auth,
+  hasPermission,
+  validateResource(createUserSchema),
+  onboardUserHandler,
+);
 
 get(
   "/",
