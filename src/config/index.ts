@@ -21,7 +21,7 @@ type Config = {
   sessionSecret: string;
   googleClientId?: string;
   googleClientSecret?: string;
-  callbackURL?: string;
+  googleCallbackUrl: string;
   cloudinaryCloudName?: string;
   cloudinaryApiKey?: string;
   cloudinaryApiSecret?: string;
@@ -50,7 +50,7 @@ const config: Config = {
 
   googleClientId: process.env.GOOGLE_CLIENT_ID,
   googleClientSecret: process.env.GOOGLE_CLIENT_SECRET,
-  callbackURL: process.env.CALLBACK_URL,
+  googleCallbackUrl: process.env.GOOGLE_CALLBACK_URL || "",
 
   cloudinaryCloudName: process.env.CLOUDINARY_CLOUD_NAME,
   cloudinaryApiKey: process.env.CLOUDINARY_API_KEY,

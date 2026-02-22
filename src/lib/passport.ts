@@ -1,62 +1,68 @@
-const passport = require("passport");
-const GoogleStrategy = require("passport-google-oauth20").Strategy;
-import AppError from "../errors/appError";
-
+import passport from "passport";
+import { Strategy as GoogleStrategy } from "passport-google-oauth20";
 import { User } from "../models/user.model";
 import { findOneUser, getUserById } from "../services/user.service";
-import log from "../utils/logger";
 import { createUser } from "../services/auth.service";
+import { findRoleByName } from "../services/role.service";
 import { getConfig } from "../config";
+import AppError from "../errors/appError";
+import log from "../utils/logger";
 
 passport.use(
   new GoogleStrategy(
     {
-      clientID: getConfig("googleClientId"),
-      clientSecret: getConfig("googleClientSecret"),
-      callbackURL: `http://localhost:${getConfig("port")}/${getConfig(
-        "callbackURL"
-      )}`,
-      scope: ["profile", "email"],
+      clientID: getConfig("googleClientId") || "",
+      clientSecret: getConfig("googleClientSecret") || "",
+      callbackURL: getConfig("googleCallbackUrl"),
+      passReqToCallback: true,
     },
-    async (accessToken: any, refreshToken: any, profile: any, done: any) => {
-      const newUser: Partial<User> = {
-        firstName: profile.name.givenName,
-        lastName: profile.name.familyName,
-        email: profile.emails[0].value,
-        password: profile.id,
-      };
-
+    async (req, accessToken, refreshToken, profile, done) => {
       try {
-        let user = await findOneUser({ email: newUser.email });
+        const email = profile.emails?.[0].value;
+        if (!email) {
+          return done(
+            new AppError("Google account has no email associated", 400),
+          );
+        }
+
+        let user = await findOneUser({ email });
 
         if (user) {
           return done(null, user);
-        } else {
-          user = await createUser(newUser);
-
-          return done(null, user);
         }
+
+        const defaultRole = await findRoleByName("customer");
+
+        const newUser = await createUser({
+          firstName: profile.name?.givenName || "Google",
+          lastName: profile.name?.familyName || "User",
+          email: email,
+          password: `google_${profile.id}`,
+          role: defaultRole?._id,
+          isVerified: true,
+        });
+
+        return done(null, newUser);
       } catch (err: any) {
-        log.error(err);
-        return done(new AppError(err.message, 500));
+        log.error("Google Strategy Error:", err);
+        return done(err, false);
       }
-    }
-  )
+    },
+  ),
 );
 
-passport.serializeUser((user: any, done: any) => {
-  done(null, user.id);
+passport.serializeUser((user: any, done) => {
+  done(null, user._id);
 });
 
-passport.deserializeUser(async (id: string, done: any) => {
+passport.deserializeUser(async (id: string, done) => {
   try {
     const user = await getUserById(id);
-    if (user) {
-      done(null, user);
-    } else {
-      done(new AppError("User not found", 404));
-    }
-  } catch (err: any) {
-    done(new AppError(err.message, 500));
+    if (!user) return done(null, false);
+    done(null, user);
+  } catch (err) {
+    done(err, null);
   }
 });
+
+export default passport;

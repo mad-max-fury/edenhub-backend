@@ -5,6 +5,7 @@ import {
   forgotPasswordSchema,
   resetPasswordSchema,
   createUserSchema,
+  verifyGoogleCodeSchema,
 } from "../schemas/auth.schemas";
 import {
   createUserHandler,
@@ -13,6 +14,7 @@ import {
   resetPasswordHandler,
   refreshTokenHandler,
   logoutHandler,
+  googleVerifyHandler,
 } from "../controllers/auth.controller";
 
 import { createAttributeRouter } from "../utils/routeBuilder.utils";
@@ -76,6 +78,18 @@ post(
     name: "post_auth_refresh_token",
   },
   refreshTokenHandler,
+);
+
+post(
+  "/google/verify",
+  {
+    resource: "Auth",
+    action: "Write",
+    group: "System Access",
+    name: "post_auth_google_verify",
+  },
+  validateResource(verifyGoogleCodeSchema),
+  googleVerifyHandler,
 );
 
 post(

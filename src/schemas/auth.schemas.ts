@@ -81,8 +81,17 @@ export const changePasswordSchema = object({
   }),
 });
 
+export const verifyGoogleCodeSchema = object({
+  body: object({
+    code: string({ required_error: "Code is required" }),
+  }),
+});
+
 export type CreateUserInputSchema = TypeOf<typeof createUserSchema>["body"];
 export type ILoginInput = TypeOf<typeof loginSchema>["body"];
 export type IForgotPasswordInput = TypeOf<typeof forgotPasswordSchema>["body"];
 export type IResetPasswordInput = TypeOf<typeof resetPasswordSchema>["body"];
 export type IChangePasswordInput = TypeOf<typeof changePasswordSchema>["body"];
+export type IVerifyGoogleCodeInput = TypeOf<
+  typeof verifyGoogleCodeSchema
+>["body"];

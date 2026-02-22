@@ -6,14 +6,27 @@ import {
   loginUser,
   resetPassword,
   refreshAccessToken,
+  signToken,
 } from "../services/auth.service";
-import { CreateUserInputSchema } from "../schemas/auth.schemas";
+import {
+  CreateUserInputSchema,
+  IVerifyGoogleCodeInput,
+} from "../schemas/auth.schemas";
 import { findOneUser } from "../services/user.service";
 import AppError from "../errors/appError";
 import { User } from "../models/user.model";
 import { findRoleByName } from "../services/role.service";
 import { AuthEmailTemplates } from "../templates/authEmail.templates";
 import { mailer } from "../utils/mailer.utils";
+import { getConfig } from "../config";
+import { OAuth2Client } from "google-auth-library";
+import jwt from "jsonwebtoken";
+
+const client = new OAuth2Client(
+  getConfig("googleClientId"),
+  getConfig("googleClientSecret"),
+  "postmessage",
+);
 
 export const createUserHandler = catchAsync(
   async (req: Request<{}, {}, CreateUserInputSchema>, res: Response) => {
@@ -134,6 +147,57 @@ export const logoutHandler = catchAsync(
     return res.status(200).json({
       status: "success",
       message: "Logged out successfully",
+    });
+  },
+);
+
+export const googleVerifyHandler = catchAsync(
+  async (req: Request, res: Response) => {
+    const { code } = req.body as IVerifyGoogleCodeInput;
+
+    const { tokens } = await client.getToken(code);
+    client.setCredentials(tokens);
+
+    const userInfo = await client.request<any>({
+      url: "https://www.googleapis.com/oauth2/v3/userinfo",
+    });
+
+    const {
+      email,
+      given_name,
+      family_name,
+      sub: googleId,
+      picture,
+    } = userInfo.data;
+
+    let user = await findOneUser({ email });
+
+    if (!user) {
+      const defaultRole = await findRoleByName("customer");
+      user = await createUser({
+        firstName: given_name,
+        lastName: family_name,
+        email: email,
+        password: googleId,
+        role: defaultRole?._id,
+        isVerified: true,
+        profilePicture: picture,
+      });
+    }
+    const accessToken = signToken(
+      user.id,
+      getConfig("jwtExpiresIn") as jwt.SignOptions["expiresIn"],
+    );
+    const refreshToken = signToken(
+      user.id,
+      getConfig("jwtRefreshExpiresIn") as jwt.SignOptions["expiresIn"],
+    );
+
+    const userJson = user.toJSON();
+    const groups = (user.role as any)?.groups || [];
+    return res.status(200).json({
+      status: "success",
+      data: { user: userJson, groups, accessToken, refreshToken },
     });
   },
 );

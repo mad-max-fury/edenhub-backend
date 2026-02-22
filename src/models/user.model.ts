@@ -64,6 +64,9 @@ export class User {
   @prop()
   passwordResetCode: string | null;
 
+  @prop({ required: false, select: false })
+  profilePicture: string;
+
   @prop()
   lastLogin?: Date;
 
