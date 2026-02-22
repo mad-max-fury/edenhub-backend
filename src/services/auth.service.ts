@@ -1,8 +1,6 @@
 import UserModel, { User } from "../models/user.model";
 import AppError from "../errors/appError";
 import jwt, { Secret } from "jsonwebtoken";
-
-import argon2 from "argon2";
 import { getConfig } from "../config";
 
 export const signToken = (
@@ -41,11 +39,11 @@ export const loginUser = async (email: string, password: string) => {
   );
 
   const userJson = user.toJSON();
-  const menus = (user.role as any)?.menus || [];
+  const groups = (user.role as any)?.groups || [];
 
   return {
     user: userJson,
-    menus,
+    groups,
     accessToken,
     refreshToken,
   };
@@ -54,7 +52,7 @@ export const loginUser = async (email: string, password: string) => {
 export const getUserProfile = async (userId: string) => {
   const user = await UserModel.findById(userId);
   if (!user) throw new AppError("User not found", 404);
-  return user.toJson();
+  return user.toJSON();
 };
 
 export const resetPassword = async (
@@ -65,7 +63,7 @@ export const resetPassword = async (
   const user = await UserModel.findOne({ email, verificationCode });
   if (!user) throw new AppError("Invalid verification code", 400);
 
-  user.password = await argon2.hash(newPassword);
+  user.password = newPassword;
   user.verificationCode = undefined;
   await user.save();
   return true;
@@ -81,7 +79,6 @@ export const generateVerificationCode = async (email: string) => {
   return verificationCode;
 };
 
-// 🔑 Refresh token
 export const refreshAccessToken = async (token: string) => {
   try {
     const decoded = jwt.verify(token, getConfig("jwtSecret")) as {
@@ -104,7 +101,6 @@ export const refreshAccessToken = async (token: string) => {
   }
 };
 
-// 🔒 Change password
 export const changePassword = async (
   userId: string,
   currentPassword: string,
@@ -116,7 +112,7 @@ export const changePassword = async (
   const isMatch = await user.comparePassword(currentPassword);
   if (!isMatch) throw new AppError("Current password is incorrect", 401);
 
-  user.password = await argon2.hash(newPassword);
+  user.password = newPassword;
   await user.save();
   return true;
 };

@@ -28,3 +28,7 @@ export const updateRolePermissions = async (
 export const deleteRole = async (id: string) => {
   return await RoleModel.findByIdAndDelete(id);
 };
+
+export const findRoleByName = async (name: string) => {
+  return await RoleModel.findOne({ name });
+};
