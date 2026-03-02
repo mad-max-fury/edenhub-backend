@@ -3,11 +3,10 @@ import { Permission } from "./permission.model";
 
 export class Group {
   @prop({ required: true, unique: true })
-  name: string; // e.g., "User Management"
+  name: string;
 
-  // Menu Metadata for the Frontend
   @prop()
-  path?: string; // e.g., "/admin/users"
+  path?: string;
 
   @prop()
   icon?: string;
