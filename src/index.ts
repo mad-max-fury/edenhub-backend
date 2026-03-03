@@ -7,13 +7,35 @@ import appErrorHandler from "./errors/appErrorHandler";
 import AppError from "./errors/appError";
 import { getConfig } from "./config";
 import { bootstrapPermissions } from "./utils/bootstrap.utils";
-
+import cors from "cors";
 const session = require("express-session");
 const passport = require("passport");
 require("./lib/passport");
 
 const startServer = async () => {
   const app = express();
+
+  const allowedOrigins = getConfig("allowedOrigins");
+
+  app.use(
+    cors({
+      origin: (
+        origin: string | undefined,
+        callback: (err: Error | null, allow?: boolean) => void,
+      ) => {
+        if (!origin) return callback(null, true);
+
+        if (allowedOrigins.indexOf(origin) !== -1) {
+          callback(null, true);
+        } else {
+          callback(new Error("Not allowed by CORS"));
+        }
+      },
+      methods: ["GET", "POST", "PATCH", "PUT", "DELETE", "OPTIONS"],
+      allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
+      credentials: true,
+    }),
+  );
 
   app.use(express.json());
   app.use(express.urlencoded({ extended: false }));
