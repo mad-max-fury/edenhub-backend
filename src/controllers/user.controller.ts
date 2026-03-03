@@ -10,6 +10,10 @@ import {
 import catchAsync from "../utils/error.utils";
 import AppError from "../errors/appError";
 import { User } from "../models/user.model";
+import { AuthEmailTemplates } from "../templates/authEmail.templates";
+import { mailer } from "../utils/mailer.utils";
+import { createUser } from "../services/auth.service";
+import { findRoleByName } from "../services/role.service";
 
 export const getAllUsersHandler = catchAsync(
   async (req: Request, res: Response) => {
@@ -24,7 +28,7 @@ export const getAllUsersHandler = catchAsync(
       message: "Users retrieved successfully",
       data: users.map((user) => user.toJSON()),
     });
-  }
+  },
 );
 
 export const getUserByIdHandler = catchAsync(
@@ -42,7 +46,39 @@ export const getUserByIdHandler = catchAsync(
       message: "User retrieved successfully",
       data: user.toJSON(),
     });
-  }
+  },
+);
+
+export const onboardUserHandler = catchAsync(
+  async (req: Request, res: Response) => {
+    const { firstName, lastName, email, password, roleName } = req.body;
+
+    const role = await findRoleByName(roleName || "customer");
+    if (!role) {
+      throw new AppError("The specified role does not exist", 400);
+    }
+
+    const user = await createUser({
+      firstName,
+      lastName,
+      email: email.toLowerCase(),
+      password,
+      role: role._id,
+      isVerified: true,
+    });
+
+    await mailer.send(
+      user.email,
+      "Welcome to EdenHub - Account Created",
+      AuthEmailTemplates.welcome(user.firstName),
+    );
+
+    return res.status(201).json({
+      status: "success",
+      message: `User onboarded successfully as ${roleName}`,
+      data: user,
+    });
+  },
 );
 
 export const updateUserHandler = catchAsync(
@@ -61,7 +97,7 @@ export const updateUserHandler = catchAsync(
       message: "User updated successfully",
       data: updatedUser.toJSON(),
     });
-  }
+  },
 );
 
 export const deleteUserHandler = catchAsync(
@@ -78,5 +114,5 @@ export const deleteUserHandler = catchAsync(
       status: "success",
       message: "User deleted successfully",
     });
-  }
+  },
 );

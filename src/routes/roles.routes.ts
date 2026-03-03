@@ -1,41 +1,64 @@
-import express from "express";
+import * as roleCtrl from "../controllers/role.controller";
 import validateResource from "../middlewares/validateResource";
-import {
-  deleteMenuHandler,
-  updateMenuHandler,
-} from "../controllers/menu.controller";
 import auth from "../middlewares/auth";
-import { hasClaim } from "../middlewares/hasClaim";
+import { hasPermission } from "../middlewares/hasPermissions";
+import { createRoleSchema, updateRoleSchema } from "../schemas/role.schema";
+import { createAttributeRouter } from "../utils/routeBuilder.utils";
 
-const router = express.Router();
+const { router, get, post, patch, delete: destroy } = createAttributeRouter();
 
-router.post(
-  "/menus",
+post(
+  "/",
+  {
+    resource: "Role",
+    action: "Write",
+    group: "Access Control",
+    name: "post_role_create",
+  },
   auth,
-  hasClaim,
-  validateResource(createUserSchema),
-  createMenuHandler,
+  hasPermission,
+  validateResource(createRoleSchema),
+  roleCtrl.createRoleHandler,
 );
-router.get(
-  "/menus/tree",
+
+get(
+  "/",
+  {
+    resource: "Role",
+    action: "Read",
+    group: "Access Control",
+    name: "get_roles_list",
+  },
   auth,
-  hasClaim,
-  validateResource(createUserSchema),
-  getMenuTreeHandler,
+  hasPermission,
+  roleCtrl.getRolesHandler,
 );
-router.patch(
-  "/menus/:id",
+
+patch(
+  "/:id",
+  {
+    resource: "Role",
+    action: "Write",
+    group: "Access Control",
+    name: "patch_role_update",
+  },
   auth,
-  hasClaim,
-  validateResource(createUserSchema),
-  updateMenuHandler,
+  hasPermission,
+  validateResource(updateRoleSchema),
+  roleCtrl.updateRoleHandler,
 );
-router.delete(
-  "/menus/:id",
+
+destroy(
+  "/:id",
+  {
+    resource: "Role",
+    action: "Delete",
+    group: "Access Control",
+    name: "delete_role",
+  },
   auth,
-  hasClaim,
-  validateResource(createUserSchema),
-  deleteMenuHandler,
+  hasPermission,
+  roleCtrl.deleteRoleHandler,
 );
 
 export default router;

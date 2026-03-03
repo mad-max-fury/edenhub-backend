@@ -1,25 +1,16 @@
-import {
-  prop,
-  getModelForClass,
-  modelOptions,
-  Ref,
-} from "@typegoose/typegoose";
-import { Menu } from "./menu.model";
-import { Claim } from "./claim.model";
+import { getModelForClass, prop, Ref } from "@typegoose/typegoose";
+import { Group } from "./group.model";
+import { Permission } from "./permission.model";
 
-@modelOptions({ schemaOptions: { timestamps: true } })
 export class Role {
   @prop({ required: true, unique: true })
   name: string;
 
-  @prop({ ref: () => Menu, type: () => [String], default: [] })
-  menus: Ref<Menu>[];
+  @prop({ ref: () => Group, default: [] })
+  groups: Ref<Group>[];
 
-  @prop({ ref: () => Claim, type: () => [String], default: [] })
-  claims: Ref<Claim>[];
-
-  @prop({ default: true })
-  isActive: boolean;
+  @prop({ ref: () => Permission, default: [] })
+  permissions: Ref<Permission>[];
 }
 
 const RoleModel = getModelForClass(Role);
