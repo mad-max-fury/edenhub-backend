@@ -32,6 +32,7 @@ type Config = {
   smtpUser: string;
   smtpPass: string;
   logLevel?: string;
+  allowedOrigins: string[];
 };
 
 const config: Config = {
@@ -39,6 +40,9 @@ const config: Config = {
   env: process.env.NODE_ENV || "development",
 
   dbUri: process.env.dbUri!,
+  allowedOrigins: process.env.frontendUrl?.split(",") || [
+    "http://localhost:5173",
+  ],
 
   jwtSecret: process.env.JWT_SECRET!,
   jwtExpiresIn: process.env.jwtExpiresIn || "15m",
