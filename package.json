@@ -13,6 +13,7 @@
   "license": "ISC",
   "devDependencies": {
     "@types/bcrypt": "^5.0.2",
+    "@types/cors": "^2.8.19",
     "@types/dotenv": "^8.2.0",
     "@types/express": "^4.17.21",
     "@types/lodash": "^4.17.5",
@@ -31,6 +32,7 @@
     "@types/passport-google-oauth20": "^2.0.16",
     "argon2": "^0.40.3",
     "bcrypt": "^5.1.1",
+    "cors": "^2.8.6",
     "dayjs": "^1.11.11",
     "dotenv": "^16.4.5",
     "express": "^4.19.2",
