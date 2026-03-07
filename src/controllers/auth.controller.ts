@@ -82,7 +82,7 @@ export const loginHandler = catchAsync(async (req: Request, res: Response) => {
   return res.status(200).json({
     status: "success",
     message: "Login successful",
-    data: { user, groups, accessToken, refreshToken },
+    data: { user, accessToken, refreshToken },
   });
 });
 
@@ -132,8 +132,8 @@ export const resetPasswordHandler = catchAsync(
 
 export const refreshTokenHandler = catchAsync(
   async (req: Request, res: Response) => {
-    const { refreshToken } = req.body;
-    const { accessToken } = await refreshAccessToken(refreshToken);
+    const { refreshToken: token } = req.body;
+    const { accessToken } = await refreshAccessToken(token);
 
     return res.status(200).json({
       status: "success",
@@ -197,7 +197,7 @@ export const googleVerifyHandler = catchAsync(
     const groups = (user.role as any)?.groups || [];
     return res.status(200).json({
       status: "success",
-      data: { user: userJson, groups, accessToken, refreshToken },
+      data: { user: userJson, accessToken, refreshToken },
     });
   },
 );

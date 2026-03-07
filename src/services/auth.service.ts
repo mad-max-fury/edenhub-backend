@@ -92,6 +92,7 @@ export const refreshAccessToken = async (token: string) => {
       user.id,
       getConfig("jwtExpiresIn") as jwt.SignOptions["expiresIn"],
     );
+
     return { accessToken };
   } catch (err) {
     if (err instanceof jwt.JsonWebTokenError) {

@@ -55,6 +55,15 @@ export class User {
   @prop()
   phoneNumber?: string;
 
+  @prop()
+  country?: string;
+
+  @prop()
+  state?: string;
+
+  @prop()
+  city?: string;
+
   @prop({ default: false })
   isVerified: boolean;
 
@@ -64,8 +73,10 @@ export class User {
   @prop()
   passwordResetCode: string | null;
 
-  @prop({ required: false, select: false })
+  @prop({ required: false, select: true })
   profilePicture: string;
+
+  public profilePictureUrl?: string;
 
   @prop()
   lastLogin?: Date;

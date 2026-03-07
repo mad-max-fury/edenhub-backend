@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from "express";
 import catchAsync from "../utils/error.utils";
 import UserModel from "../models/user.model";
 import AppError from "../errors/appError";
+import { Role } from "../models/role.model";
 
 export const hasPermission = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
@@ -13,7 +14,7 @@ export const hasPermission = catchAsync(
       ],
     });
 
-    const role = user?.role as any;
+    const role = user?.role as Role;
     if (!role) throw new AppError("No role assigned", 403);
 
     const currentPath = req.route.path;
@@ -29,7 +30,7 @@ export const hasPermission = catchAsync(
       ),
     );
 
-    if (!hasDirect && !hasViaGroup) {
+    if (!hasDirect && !hasViaGroup && role.name !== "super-admin") {
       throw new AppError("You do not have permission for this action", 403);
     }
 
