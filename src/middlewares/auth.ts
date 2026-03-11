@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from "express";
 import jwt, { JwtPayload } from "jsonwebtoken";
 import AppError from "../errors/appError";
 import { findOneUser } from "../services/user.service";
+import { getConfig } from "../config";
 
 export interface UserPayload extends JwtPayload {
   id: string;
@@ -23,12 +24,11 @@ const auth = async (req: Request, res: Response, next: NextFunction) => {
     }
 
     const token = authHeader.split(" ")[1];
-    const secret = process.env.JWT_SECREET;
+    const secret = getConfig("jwtSecret");
     if (!secret) {
       throw new AppError("JWT secret not configured.", 500);
     }
 
-    // Verify the token
     const decoded = jwt.verify(token, secret) as UserPayload;
     req.user = { id: decoded.id };
 
@@ -43,7 +43,7 @@ const auth = async (req: Request, res: Response, next: NextFunction) => {
     next();
   } catch (err: any) {
     if (err.name === "JsonWebTokenError") {
-      return next(new AppError("Invalid token. Please log in again.", 401));
+      return next(new AppError("Invalid token. Please log in again.", 403));
     }
     if (err.name === "TokenExpiredError") {
       return next(

@@ -4,16 +4,15 @@ import {
   Ref,
   getModelForClass,
 } from "@typegoose/typegoose";
-import { User } from "./user.model"; // Ensure this import points to the correct User model file
+import { User } from "./user.model";
 
-// Define the Review class
 @modelOptions({
   schemaOptions: {
     timestamps: true,
   },
 })
 export class Review {
-  @prop({ required: true, ref: () => User }) // Ensure ref points to the correct User class
+  @prop({ required: true, ref: () => User })
   user: Ref<User>;
 
   @prop({ required: true })
@@ -41,7 +40,6 @@ export class Review {
   helpful: number;
 }
 
-// Create the Mongoose model for Review
 const ReviewModel = getModelForClass(Review);
 
 export default ReviewModel;

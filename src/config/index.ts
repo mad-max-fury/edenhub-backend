@@ -33,6 +33,10 @@ type Config = {
   smtpPass: string;
   logLevel?: string;
   allowedOrigins: string[];
+  awsBucketName: string;
+  awsAccessKey: string;
+  awsSecretKey: string;
+  awsRegion: string;
 };
 
 const config: Config = {
@@ -66,6 +70,10 @@ const config: Config = {
   smtpPort: parseInt(process.env.SMTP_PORT || "587"),
   smtpUser: process.env.SMTP_USER || "",
   smtpPass: process.env.SMTP_PASS || "",
+  awsAccessKey: process.env.awsAccessKey || "",
+  awsBucketName: process.env.awsBucketName || "",
+  awsRegion: process.env.awsRegion || "",
+  awsSecretKey: process.env.awsSecretKey || "",
 
   logLevel: process.env.logLevel || "i",
 };

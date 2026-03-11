@@ -1,4 +1,5 @@
 import {
+  changePasswordHandler,
   deleteUserHandler,
   getAllUsersHandler,
   getUserByIdHandler,
@@ -10,6 +11,7 @@ import { hasPermission } from "../middlewares/hasPermissions";
 import { createAttributeRouter } from "../utils/routeBuilder.utils";
 import validateResource from "../middlewares/validateResource";
 import { createUserSchema } from "../schemas/auth.schemas";
+import { changePasswordSchema } from "../schemas/user.schemas";
 
 const { router, get, post, patch, delete: destroy } = createAttributeRouter();
 
@@ -77,6 +79,19 @@ destroy(
   auth,
   hasPermission,
   deleteUserHandler,
+);
+
+patch(
+  "/change-password",
+  {
+    resource: "User",
+    action: "Write",
+    group: "User Management",
+    name: "patch_user_change_password",
+  },
+  auth,
+  validateResource(changePasswordSchema),
+  changePasswordHandler,
 );
 
 export default router;
