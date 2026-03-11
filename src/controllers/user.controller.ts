@@ -5,6 +5,7 @@ import {
   updateUser,
   deleteUser,
   getAllUsers,
+  changeUserPassword,
 } from "../services/user.service";
 
 import catchAsync from "../utils/error.utils";
@@ -23,10 +24,17 @@ export const getAllUsersHandler = catchAsync(
       throw new AppError("No users found", 404);
     }
 
+    const data = await Promise.all(
+      users.map(async (user) => {
+        const userObj = user.toJSON();
+        return userObj;
+      }),
+    );
+
     return res.status(200).json({
       status: "success",
       message: "Users retrieved successfully",
-      data: users.map((user) => user.toJSON()),
+      data,
     });
   },
 );
@@ -41,10 +49,12 @@ export const getUserByIdHandler = catchAsync(
       throw new AppError("User not found", 404);
     }
 
+    const data = user.toJSON();
+
     return res.status(200).json({
       status: "success",
       message: "User retrieved successfully",
-      data: user.toJSON(),
+      data,
     });
   },
 );
@@ -76,7 +86,7 @@ export const onboardUserHandler = catchAsync(
     return res.status(201).json({
       status: "success",
       message: `User onboarded successfully as ${roleName}`,
-      data: user,
+      data: user.toJSON(),
     });
   },
 );
@@ -92,10 +102,12 @@ export const updateUserHandler = catchAsync(
       throw new AppError("User not found or update failed", 404);
     }
 
+    const data = updatedUser.toJSON();
+
     return res.status(200).json({
       status: "success",
       message: "User updated successfully",
-      data: updatedUser.toJSON(),
+      data,
     });
   },
 );
@@ -113,6 +125,23 @@ export const deleteUserHandler = catchAsync(
     return res.status(200).json({
       status: "success",
       message: "User deleted successfully",
+    });
+  },
+);
+export const changePasswordHandler = catchAsync(
+  async (req: Request, res: Response) => {
+    const { currentPassword, newPassword, confirmPassword } = req.body;
+    const userId = req.user?.id as string;
+
+    await changeUserPassword(userId, {
+      currentPassword,
+      newPassword,
+      confirmPassword,
+    });
+
+    res.status(200).json({
+      status: "success",
+      message: "Password updated successfully",
     });
   },
 );

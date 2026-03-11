@@ -65,22 +65,6 @@ export const resetPasswordSchema = object({
   }),
 });
 
-export const changePasswordSchema = object({
-  body: object({
-    currentPassword: string({ required_error: "Current password is required" }),
-    newPassword: string({ required_error: "New password is required" }).min(
-      6,
-      "Password must be at least 6 characters long",
-    ),
-    passwordConfirmation: string({
-      required_error: "Password confirmation is required",
-    }),
-  }).refine((data) => data.newPassword === data.passwordConfirmation, {
-    message: "Passwords do not match",
-    path: ["passwordConfirmation"],
-  }),
-});
-
 export const verifyGoogleCodeSchema = object({
   body: object({
     code: string({ required_error: "Code is required" }),
@@ -91,7 +75,7 @@ export type CreateUserInputSchema = TypeOf<typeof createUserSchema>["body"];
 export type ILoginInput = TypeOf<typeof loginSchema>["body"];
 export type IForgotPasswordInput = TypeOf<typeof forgotPasswordSchema>["body"];
 export type IResetPasswordInput = TypeOf<typeof resetPasswordSchema>["body"];
-export type IChangePasswordInput = TypeOf<typeof changePasswordSchema>["body"];
+
 export type IVerifyGoogleCodeInput = TypeOf<
   typeof verifyGoogleCodeSchema
 >["body"];
