@@ -194,7 +194,6 @@ export const googleVerifyHandler = catchAsync(
     );
 
     const userJson = user.toJSON();
-    const groups = (user.role as any)?.groups || [];
     return res.status(200).json({
       status: "success",
       data: { user: userJson, accessToken, refreshToken },

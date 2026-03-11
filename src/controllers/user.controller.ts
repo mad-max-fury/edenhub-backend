@@ -5,6 +5,7 @@ import {
   updateUser,
   deleteUser,
   getAllUsers,
+  changeUserPassword,
 } from "../services/user.service";
 
 import catchAsync from "../utils/error.utils";
@@ -124,6 +125,23 @@ export const deleteUserHandler = catchAsync(
     return res.status(200).json({
       status: "success",
       message: "User deleted successfully",
+    });
+  },
+);
+export const changePasswordHandler = catchAsync(
+  async (req: Request, res: Response) => {
+    const { currentPassword, newPassword, confirmPassword } = req.body;
+    const userId = req.user?.id as string;
+
+    await changeUserPassword(userId, {
+      currentPassword,
+      newPassword,
+      confirmPassword,
+    });
+
+    res.status(200).json({
+      status: "success",
+      message: "Password updated successfully",
     });
   },
 );

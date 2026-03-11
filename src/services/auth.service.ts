@@ -101,19 +101,3 @@ export const refreshAccessToken = async (token: string) => {
     throw err;
   }
 };
-
-export const changePassword = async (
-  userId: string,
-  currentPassword: string,
-  newPassword: string,
-) => {
-  const user = await UserModel.findById(userId).select("+password");
-  if (!user) throw new AppError("User not found", 404);
-
-  const isMatch = await user.comparePassword(currentPassword);
-  if (!isMatch) throw new AppError("Current password is incorrect", 401);
-
-  user.password = newPassword;
-  await user.save();
-  return true;
-};
