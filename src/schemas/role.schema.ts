@@ -1,9 +1,14 @@
 import { array, boolean, object, string, TypeOf } from "zod";
 
+const roleGroupSchema = object({
+  id: string({ required_error: "Group ID is required" }),
+  permissionsId: array(string()).default([]),
+});
+
 export const createRoleSchema = object({
   body: object({
     name: string({ required_error: "Role name is required" }),
-    groups: array(string()).default([]),
+    groups: array(roleGroupSchema).default([]),
     permissions: array(string()).default([]),
     isActive: boolean().optional().default(true),
   }),
@@ -15,7 +20,7 @@ export const updateRoleSchema = object({
   }),
   body: object({
     name: string().optional(),
-    groups: array(string()).optional(),
+    groups: array(roleGroupSchema).optional(),
     permissions: array(string()).optional(),
     isActive: boolean().optional(),
   }),

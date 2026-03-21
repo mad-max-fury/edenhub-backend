@@ -1,6 +1,7 @@
 import { Application } from "express";
 import PermissionModel from "../models/permission.model";
 import log from "./logger";
+import GroupModel from "../models/group.model";
 
 export const bootstrapPermissions = async (app: Application) => {
   const routes: any[] = [];
@@ -54,6 +55,28 @@ export const bootstrapPermissions = async (app: Application) => {
     const result = await PermissionModel.bulkWrite(permissionOps, {
       ordered: false,
     });
+
+    const allPermissions = await PermissionModel.find({
+      endpoint: { $in: routes.map((r) => r.endpoint) },
+    }).select("_id name group");
+
+    const groupMapping: Record<string, string[]> = {};
+    allPermissions.forEach((p) => {
+      if (!groupMapping[p.group]) groupMapping[p.group] = [];
+      groupMapping[p.group].push(p._id.toString());
+    });
+
+    const groupOps = Object.keys(groupMapping).map((groupName) => ({
+      updateOne: {
+        filter: { name: groupName },
+        update: {
+          $addToSet: { permissions: { $each: groupMapping[groupName] } },
+        },
+        upsert: true,
+      },
+    }));
+
+    await GroupModel.bulkWrite(groupOps);
 
     log.info(
       `🚀 Bootstrap Complete: ${result.upsertedCount} new, ${result.modifiedCount} updated.`,

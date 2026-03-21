@@ -15,6 +15,9 @@ export class Permission {
   resource: string;
 
   @prop({ required: true })
+  group: string;
+
+  @prop({ required: true })
   action: string;
 
   @prop({ default: true })
