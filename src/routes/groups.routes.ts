@@ -34,6 +34,66 @@ get(
   hasPermission,
   groupCtrl.getGroupsHandler,
 );
+get(
+  "/unpaginated",
+  {
+    resource: "Group",
+    action: "Read",
+    group: "Access Control",
+    name: "get_groups_list_unpaginated",
+  },
+  hasPermission,
+  groupCtrl.getGroupsUnpaginatedHandler,
+);
+get(
+  "/groups/:id",
+  {
+    resource: "Group",
+    action: "Read",
+    group: "Access Control",
+    name: "get_group_by_id",
+  },
+  auth,
+  hasPermission,
+  groupCtrl.getGroupByIdHandler,
+);
+
+get(
+  "/:id/permissions",
+  {
+    resource: "Group",
+    action: "Read",
+    group: "Access Control",
+    name: "get_single_group_permissions",
+  },
+  auth,
+  hasPermission,
+  groupCtrl.getSingleGroupPermissionsHandler,
+);
+
+patch(
+  "/:id/add-permission",
+  {
+    resource: "Group",
+    action: "Write",
+    group: "Access Control",
+    name: "patch_add_permission_to_group",
+  },
+  hasPermission,
+  groupCtrl.addPermissionToGroupHandler,
+);
+
+patch(
+  "/:id/remove-permission",
+  {
+    resource: "Group",
+    action: "Write",
+    group: "Access Control",
+    name: "patch_remove_permission_from_group",
+  },
+  hasPermission,
+  groupCtrl.removePermissionFromGroupHandler,
+);
 
 patch(
   "/:id",

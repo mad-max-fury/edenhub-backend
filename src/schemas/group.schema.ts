@@ -1,3 +1,4 @@
+import { isValidObjectId } from "mongoose";
 import { array, number, object, string, TypeOf, optional } from "zod";
 
 export const updateGroupSchema = object({
@@ -16,10 +17,23 @@ export const updateGroupSchema = object({
 export const createGroupSchema = object({
   body: object({
     name: string({ required_error: "Group name is required" }),
-    path: string({ required_error: "Path is required" }),
+    path: string().optional(),
     icon: string().optional(),
     order: number().default(0),
     permissions: array(string()).default([]),
+  }),
+});
+
+export const manageGroupPermissionSchema = object({
+  params: object({
+    id: string().refine((val) => isValidObjectId(val), {
+      message: "Invalid Group ID",
+    }),
+  }),
+  body: object({
+    permissionId: string().refine((val) => isValidObjectId(val), {
+      message: "Invalid Permission ID",
+    }),
   }),
 });
 

@@ -52,6 +52,9 @@ export class User {
   @prop({ ref: () => Role, required: true })
   role: Ref<Role>;
 
+  @prop({ unique: true })
+  staffId?: string;
+
   @prop()
   phoneNumber?: string;
 
