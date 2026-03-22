@@ -1,7 +1,8 @@
 import {
   changePasswordHandler,
   deleteUserHandler,
-  getAllUsersHandler,
+  getCustomersHandler,
+  getStaffHandler,
   getUserByIdHandler,
   onboardUserHandler,
   updateUserHandler,
@@ -11,7 +12,11 @@ import { hasPermission } from "../middlewares/hasPermissions";
 import { createAttributeRouter } from "../utils/routeBuilder.utils";
 import validateResource from "../middlewares/validateResource";
 import { createUserSchema } from "../schemas/auth.schemas";
-import { changePasswordSchema } from "../schemas/user.schemas";
+import {
+  changePasswordSchema,
+  IOnboardUserSchema,
+  paginationSchema,
+} from "../schemas/user.schemas";
 
 const { router, get, post, patch, delete: destroy } = createAttributeRouter();
 
@@ -25,7 +30,7 @@ post(
   },
   auth,
   hasPermission,
-  validateResource(createUserSchema),
+  validateResource(IOnboardUserSchema),
   onboardUserHandler,
 );
 
@@ -35,11 +40,26 @@ get(
     resource: "User",
     action: "Read",
     group: "User Management",
-    name: "get_users_list",
+    name: "get_customers_list",
   },
   auth,
   hasPermission,
-  getAllUsersHandler,
+  validateResource(paginationSchema),
+  getCustomersHandler,
+);
+
+get(
+  "/staffs",
+  {
+    resource: "User",
+    action: "Read",
+    group: "User Management",
+    name: "get_staff_list",
+  },
+  auth,
+  hasPermission,
+  validateResource(paginationSchema),
+  getStaffHandler,
 );
 
 get(

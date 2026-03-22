@@ -47,7 +47,7 @@ const auth = async (req: Request, res: Response, next: NextFunction) => {
     }
     if (err.name === "TokenExpiredError") {
       return next(
-        new AppError("Your token has expired. Please log in again.", 401),
+        new AppError("Your token has expired. Please log in again.", 403),
       );
     }
 

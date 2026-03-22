@@ -2,7 +2,11 @@ import * as roleCtrl from "../controllers/role.controller";
 import validateResource from "../middlewares/validateResource";
 import auth from "../middlewares/auth";
 import { hasPermission } from "../middlewares/hasPermissions";
-import { createRoleSchema, updateRoleSchema } from "../schemas/role.schema";
+import {
+  createRoleSchema,
+  updateRoleSchema,
+  roleParamsSchema,
+} from "../schemas/role.schema";
 import { createAttributeRouter } from "../utils/routeBuilder.utils";
 
 const { router, get, post, patch, delete: destroy } = createAttributeRouter();
@@ -34,6 +38,33 @@ get(
   roleCtrl.getRolesHandler,
 );
 
+get(
+  "/unpaginated",
+  {
+    resource: "Role",
+    action: "Read",
+    group: "Access Control",
+    name: "get_unpaginated_roles_list",
+  },
+  auth,
+  hasPermission,
+  roleCtrl.getRolesUnpaginatedHandler,
+);
+
+get(
+  "/:id",
+  {
+    resource: "Role",
+    action: "Read",
+    group: "Access Control",
+    name: "get_role_by_id",
+  },
+  auth,
+  hasPermission,
+  validateResource(roleParamsSchema),
+  roleCtrl.getRoleByIdHandler,
+);
+
 patch(
   "/:id",
   {
@@ -58,6 +89,7 @@ destroy(
   },
   auth,
   hasPermission,
+  validateResource(roleParamsSchema),
   roleCtrl.deleteRoleHandler,
 );
 

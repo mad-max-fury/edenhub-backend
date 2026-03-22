@@ -24,13 +24,7 @@ export const hasPermission = catchAsync(
       (p: any) => p.endpoint === currentPath && p.method === currentMethod,
     );
 
-    const hasViaGroup = role.groups.some((group: any) =>
-      group.permissions.some(
-        (p: any) => p.endpoint === currentPath && p.method === currentMethod,
-      ),
-    );
-
-    if (!hasDirect && !hasViaGroup && role.name !== "super-admin") {
+    if (!hasDirect && role.name !== "super-admin") {
       throw new AppError("You do not have permission for this action", 403);
     }
 
