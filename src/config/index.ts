@@ -44,9 +44,7 @@ const config: Config = {
   env: process.env.NODE_ENV || "development",
 
   dbUri: process.env.dbUri!,
-  allowedOrigins: process.env.frontendUrl?.split(",") || [
-    "http://localhost:5173",
-  ],
+  allowedOrigins: process.env.frontendUrls?.split(",") as string[],
 
   jwtSecret: process.env.JWT_SECRET!,
   jwtExpiresIn: process.env.jwtExpiresIn || "15m",

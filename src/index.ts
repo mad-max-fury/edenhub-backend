@@ -15,25 +15,25 @@ require("./lib/passport");
 const startServer = async () => {
   const app = express();
 
-  const allowedOrigins = getConfig("allowedOrigins");
+  const rawOrigins = getConfig("allowedOrigins") || [];
+  const allowedOrigins = rawOrigins.map((url) => url.replace(/\/$/, "").trim());
 
   app.use(
     cors({
-      origin: (
-        origin: string | undefined,
-        callback: (err: Error | null, allow?: boolean) => void,
-      ) => {
+      origin: (origin, callback) => {
         if (!origin) return callback(null, true);
 
-        if (allowedOrigins.indexOf(origin) !== -1) {
+        if (allowedOrigins.includes(origin)) {
           callback(null, true);
         } else {
+          console.error(`CORS Blocked for origin: ${origin}`);
           callback(new Error("Not allowed by CORS"));
         }
       },
       methods: ["GET", "POST", "PATCH", "PUT", "DELETE", "OPTIONS"],
       allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
       credentials: true,
+      optionsSuccessStatus: 200,
     }),
   );
 
