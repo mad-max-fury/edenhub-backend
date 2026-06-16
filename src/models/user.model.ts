@@ -6,6 +6,7 @@ import {
   Severity,
   DocumentType,
   Ref,
+  index,
 } from "@typegoose/typegoose";
 import argon2 from "argon2";
 import log from "../utils/logger";
@@ -13,6 +14,38 @@ import { Types } from "mongoose";
 import { Product } from "./product.model";
 import { Role } from "./role.model";
 
+export class UserAddress {
+  @prop({ required: true, trim: true })
+  fullName: string;
+
+  @prop({ trim: true })
+  phone?: string;
+
+  @prop({ required: true, trim: true })
+  address: string;
+
+  @prop({ required: true, trim: true })
+  city: string;
+
+  @prop({ required: true, trim: true })
+  state: string;
+
+  @prop({ default: "Nigeria", trim: true })
+  country: string;
+
+  @prop({ trim: true })
+  postalCode?: string;
+
+  @prop({ default: false })
+  isDefault: boolean;
+}
+
+// Unique only among users that actually have a staffId (staff). Customers have
+// none, so they are excluded entirely and never collide on null.
+@index(
+  { staffId: 1 },
+  { unique: true, partialFilterExpression: { staffId: { $type: "string" } } },
+)
 @pre<User>("save", async function () {
   if (!this.isModified("password")) return;
   this.password = await argon2.hash(this.password);
@@ -52,7 +85,8 @@ export class User {
   @prop({ ref: () => Role, required: true })
   role: Ref<Role>;
 
-  @prop({ unique: true })
+  // Uniqueness enforced via a partial index on the class (see @index above).
+  @prop()
   staffId?: string;
 
   @prop()
@@ -87,8 +121,18 @@ export class User {
   @prop({ default: true })
   isActive: boolean;
 
+  @prop({ default: false })
+  twoFactorEnabled: boolean;
+
   @prop({ ref: () => Product, default: [] })
   wishlist: Ref<Product>[];
+
+  @prop({ type: () => [UserAddress], default: [], _id: true })
+  addresses: UserAddress[];
+
+  // Admin/customer notification toggles, keyed by preference id.
+  @prop({ type: () => Object, default: {} })
+  notificationPreferences: Record<string, boolean>;
 
   async comparePassword(this: DocumentType<User>, candidatePassword: string) {
     try {

@@ -7,6 +7,9 @@ import appErrorHandler from "./errors/appErrorHandler";
 import AppError from "./errors/appError";
 import { getConfig } from "./config";
 import { bootstrapPermissions } from "./utils/bootstrap.utils";
+import { ensureUserIndexes } from "./utils/ensureIndexes";
+import auditLogger from "./middlewares/auditLogger";
+import { paystackWebhookHandler } from "./controllers/order.controller";
 import cors from "cors";
 const session = require("express-session");
 const passport = require("passport");
@@ -15,26 +18,34 @@ require("./lib/passport");
 const startServer = async () => {
   const app = express();
 
-  const allowedOrigins = getConfig("allowedOrigins");
+  const rawOrigins = getConfig("allowedOrigins") || [];
+  const allowedOrigins = rawOrigins.map((url) => url.replace(/\/$/, "").trim());
 
   app.use(
     cors({
-      origin: (
-        origin: string | undefined,
-        callback: (err: Error | null, allow?: boolean) => void,
-      ) => {
+      origin: (origin, callback) => {
         if (!origin) return callback(null, true);
 
-        if (allowedOrigins.indexOf(origin) !== -1) {
+        if (allowedOrigins.includes(origin)) {
           callback(null, true);
         } else {
+          console.error(`CORS Blocked for origin: ${origin}`);
           callback(new Error("Not allowed by CORS"));
         }
       },
       methods: ["GET", "POST", "PATCH", "PUT", "DELETE", "OPTIONS"],
       allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
       credentials: true,
+      optionsSuccessStatus: 200,
     }),
+  );
+
+  // Paystack webhook needs the raw body for signature verification, so it is
+  // mounted before the JSON body parser.
+  app.post(
+    "/api/order/webhook/paystack",
+    express.raw({ type: "*/*" }),
+    paystackWebhookHandler,
   );
 
   app.use(express.json());
@@ -55,7 +66,9 @@ const startServer = async () => {
   app.use(passport.session());
 
   await connectDocumentDB();
+  await ensureUserIndexes();
 
+  app.use(auditLogger);
   app.use(router);
 
   try {

@@ -37,6 +37,20 @@ type Config = {
   awsAccessKey: string;
   awsSecretKey: string;
   awsRegion: string;
+  storefrontUrl: string;
+  paystackSecretKey: string;
+  paystackBaseUrl: string;
+  shipbubbleApiKey: string;
+  shipbubbleBaseUrl: string;
+  shipOrigin: {
+    name: string;
+    email: string;
+    phone: string;
+    address: string;
+    city: string;
+    state: string;
+    country: string;
+  };
 };
 
 const config: Config = {
@@ -44,9 +58,7 @@ const config: Config = {
   env: process.env.NODE_ENV || "development",
 
   dbUri: process.env.dbUri!,
-  allowedOrigins: process.env.frontendUrl?.split(",") || [
-    "http://localhost:5173",
-  ],
+  allowedOrigins: process.env.frontendUrls?.split(",") as string[],
 
   jwtSecret: process.env.JWT_SECRET!,
   jwtExpiresIn: process.env.jwtExpiresIn || "15m",
@@ -74,6 +86,25 @@ const config: Config = {
   awsBucketName: process.env.awsBucketName || "",
   awsRegion: process.env.awsRegion || "",
   awsSecretKey: process.env.awsSecretKey || "",
+
+  storefrontUrl: process.env.STOREFRONT_URL || "http://localhost:3000",
+  paystackSecretKey: process.env.PAYSTACK_SECRET_KEY || "",
+  paystackBaseUrl: process.env.PAYSTACK_BASE_URL || "https://api.paystack.co",
+  shipbubbleApiKey: process.env.SHIPBUBBLE_API_KEY || "",
+  shipbubbleBaseUrl:
+    process.env.SHIPBUBBLE_BASE_URL || "https://api.shipbubble.com/v1",
+
+  // Ship-from / store origin (replace placeholders via .env or here).
+  shipOrigin: {
+    name: process.env.SHIP_ORIGIN_NAME || "EdenHub Store",
+    email: process.env.SHIP_ORIGIN_EMAIL || "store@edenhub.com",
+    phone: process.env.SHIP_ORIGIN_PHONE || "08000000000",
+    address:
+      process.env.SHIP_ORIGIN_ADDRESS || "1 Admiralty Way, Lekki Phase 1",
+    city: process.env.SHIP_ORIGIN_CITY || "Lekki",
+    state: process.env.SHIP_ORIGIN_STATE || "Lagos",
+    country: process.env.SHIP_ORIGIN_COUNTRY || "Nigeria",
+  },
 
   logLevel: process.env.logLevel || "i",
 };

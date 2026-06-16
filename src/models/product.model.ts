@@ -8,99 +8,85 @@ import {
   DocumentType,
   pre,
 } from "@typegoose/typegoose";
-import { User } from "./user.model"; // Make sure this path is correct
-import { Types } from "mongoose";
-// import { Review } from "./review.model";
+import { nanoid } from "nanoid";
+import { Category } from "./category.model";
 
-// Define the Discount class
-// class Discount {
-//   @prop({ required: true, enum: ["percentage", "fixed"] })
-//   type: "percentage" | "fixed";
+export enum ProductStatus {
+  Active = "active",
+  Archived = "archived",
+  Drafted = "drafted",
+}
 
-//   @prop({ required: true })
-//   value: number;
+// Embedded discount shared by products and their variants.
+export class Discount {
+  @prop({ default: 0, min: 0, max: 100 })
+  percentage: number;
 
-//   @prop({ required: true })
-//   startDate: Date;
+  @prop({ default: 0, min: 0 })
+  price: number;
 
-//   @prop({ required: true })
-//   endDate: Date;
+  @prop()
+  startDate?: Date;
 
-//   @prop({ required: true })
-//   isActive: boolean;
-// }
+  @prop()
+  endDate?: Date;
 
-// Define the Variant class
-// class Variant {
-//   @prop({ required: true })
-//   color: string;
+  @prop()
+  promotionName?: string;
+}
 
-//   @prop({ required: true })
-//   caseSize: number;
-
-//   @prop({ required: true })
-//   strap: string;
-
-//   @prop({ required: true })
-//   price: number;
-
-//   @prop({ required: true })
-//   stock: number;
-
-//   @prop({ required: true })
-//   sku: string;
-
-//   @prop({ type: () => [String], default: [] })
-//   images: string[];
-// }
-
-// Define the Specifications class
-// class Specifications {
-//   @prop({ required: true })
-//   movement: string;
-
-//   @prop({ required: true })
-//   waterResistance: string;
-
-//   @prop({ required: true })
-//   caseMaterial: string;
-
-//   @prop({ required: true })
-//   crystalType: string;
-
-//   @prop({ required: true })
-//   dialColor: string;
-
-//   @prop({ type: () => [String], default: [] })
-//   functions: string[];
-
-//   @prop({ required: true })
-//   powerReserve: string;
-
-//   @prop({ required: true })
-//   warranty: string;
-// }
-
-// Define the Product class
-@index({ name: "text", description: "text" })
-@index({ brand: 1 })
-@index({ "variants.sku": 1 })
-// @pre<Product>("save", function () {
-//   if (this.isModified("reviews")) {
-//     const totalRatings = this.reviews.length;
-//     if (totalRatings > 0) {
-//       const sum = this.reviews.reduce((acc, review) => acc + review.rating, 0);
-//       this.averageRating = Number((sum / totalRatings).toFixed(1));
-//     }
-//   }
-// })
 @modelOptions({
-  schemaOptions: {
-    timestamps: true,
-  },
-  options: {
-    allowMixed: Severity.ALLOW,
-  },
+  schemaOptions: { _id: true },
+  options: { allowMixed: Severity.ALLOW },
+})
+export class Variant {
+  @prop({ required: true, trim: true })
+  name: string;
+
+  @prop({ required: true, unique: false })
+  sku: string;
+
+  @prop({ required: true, default: 0, min: 0 })
+  basePrice: number;
+
+  @prop({ type: () => Discount, default: {}, _id: false })
+  discount: Discount;
+
+  @prop({ default: 0, min: 0 })
+  quantity: number;
+
+  // Values for the category's dynamic attributes, keyed by attribute id.
+  @prop({ type: () => Object, default: {} })
+  attributes: Record<string, unknown>;
+
+  @prop({ type: () => [String], default: [] })
+  tags: string[];
+
+  @prop({ type: () => [String], default: [] })
+  images: string[];
+
+  @prop({ default: true })
+  isActive: boolean;
+}
+
+@index({ name: "text", description: "text", brand: "text" })
+@index({ category: 1 })
+@index({ status: 1 })
+@index({ "variants.sku": 1 })
+@pre<Product>("save", function (next) {
+  // Auto-assign a SKU to any variant that doesn't have one yet.
+  if (this.variants?.length) {
+    this.variants.forEach((variant) => {
+      if (!variant.sku) {
+        variant.sku = `SKU-${nanoid(8).toUpperCase()}`;
+      }
+    });
+  }
+  next();
+})
+@modelOptions({
+  schemaOptions: { timestamps: true },
+  options: { allowMixed: Severity.ALLOW },
 })
 export class Product {
   @prop({ required: true, trim: true })
@@ -109,29 +95,59 @@ export class Product {
   @prop({ required: true })
   description: string;
 
-  @prop({ required: true })
-  brand: string;
+  @prop({ trim: true })
+  brand?: string;
 
-  @prop({ required: true, default: 0 })
+  @prop({ ref: () => Category, required: true })
+  category: Ref<Category>;
+
+  @prop({ required: true, default: 0, min: 0 })
   basePrice: number;
 
-  // @prop({ required: true, enum: ["analog", "digital", "smart", "luxury"] })
-  // category: string;
+  @prop({ type: () => Discount, default: {}, _id: false })
+  discount: Discount;
 
-  // @prop({ type: () => [String], default: [] })
-  // tags: string[];
+  // Base (non-variant) stock.
+  @prop({ default: 0, min: 0 })
+  quantity: number;
 
-  // @prop({ type: () => Discount })
-  // discount?: Discount;
+  // Values for the category's dynamic attributes, keyed by attribute id.
+  @prop({ type: () => Object, default: {} })
+  attributes: Record<string, unknown>;
 
-  // @prop({ type: () => [Variant], required: true, _id: false })
-  // variants: Variant[];
+  @prop({ type: () => [String], default: [] })
+  tags: string[];
 
-  // @prop({ type: () => Specifications, required: true })
-  // specifications: Specifications;
+  @prop()
+  coverImage?: string;
 
-  // @prop({ type: () => [Review], default: [] })
-  // reviews: Review[];
+  @prop({ type: () => [String], default: [] })
+  images: string[];
+
+  @prop()
+  weight?: string;
+
+  @prop({ default: false })
+  isReturnable: boolean;
+
+  @prop({ min: 0 })
+  returnableDays?: number;
+
+  @prop({ default: false })
+  hasWarranty: boolean;
+
+  @prop({ min: 0 })
+  warrantyYears?: number;
+
+  @prop({ type: () => [Variant], default: [] })
+  variants: Variant[];
+
+  @prop({
+    required: true,
+    enum: ProductStatus,
+    default: ProductStatus.Active,
+  })
+  status: ProductStatus;
 
   @prop({ default: 0 })
   averageRating: number;
@@ -142,134 +158,43 @@ export class Product {
   @prop({ default: 0 })
   totalSales: number;
 
-  @prop({ default: true })
-  isActive: boolean;
-
   @prop({ type: () => [String], default: [] })
   relatedProducts: Ref<Product>[];
 
-  // @prop({
-  //   type: () => ({
-  //     width: Number,
-  //     height: Number,
-  //     depth: Number,
-  //     weight: Number,
-  //   }),
-  // })
-  // dimensions?: {
-  //   width: number;
-  //   height: number;
-  //   depth: number;
-  //   weight: number;
-  // };
+  // ── Methods ────────────────────────────────────────────────────────────────
 
-  // @prop({
-  //   type: () => ({
-  //     title: String,
-  //     keywords: [String],
-  //     description: String,
-  //   }),
-  // })
-  // seo?: {
-  //   title: string;
-  //   keywords: string[];
-  //   description: string;
-  // };
+  // Effective price after an active discount (variant-aware).
+  getCurrentPrice(this: DocumentType<Product>, variantIndex?: number): number {
+    const source =
+      variantIndex !== undefined && this.variants[variantIndex]
+        ? this.variants[variantIndex]
+        : this;
 
-  // Methods
-  getCurrentPrice(
-    this: DocumentType<Product>,
-    variantIndex: number = 0
-  ): number {
-    // const variant = this.variants[variantIndex];
-    // if (!variant) return this.basePrice;
-
-    // if (this.discount && this.discount.isActive) {
-    //   const now = new Date();
-    //   if (now >= this.discount.startDate && now <= this.discount.endDate) {
-    //     if (this.discount.type === "percentage") {
-    //       return variant.price * (1 - this.discount.value / 100);
-    //     } else {
-    //       return Math.max(0, variant.price - this.discount.value);
-    //     }
-    //   }
-    // }
-    // return variant.price;
-    return this.basePrice;
+    const discount = source.discount;
+    if (discount?.price && discount.price > 0) {
+      const now = new Date();
+      const started = !discount.startDate || now >= discount.startDate;
+      const notEnded = !discount.endDate || now <= discount.endDate;
+      if (started && notEnded) return discount.price;
+    }
+    return source.basePrice;
   }
 
-  isInStock(this: DocumentType<Product>, variantIndex: number = 0): boolean {
-    // return this.variants[variantIndex]?.stock > 0;
-    return false;
+  isInStock(this: DocumentType<Product>, variantIndex?: number): boolean {
+    if (variantIndex !== undefined && this.variants[variantIndex]) {
+      return this.variants[variantIndex].quantity > 0;
+    }
+    return this.getTotalStock() > 0;
   }
 
   getTotalStock(this: DocumentType<Product>): number {
-    // return this.variants.reduce((total, variant) => total + variant.stock, 0);
-    return 0;
-  }
-
-  // async addReview(
-  //   this: DocumentType<Product>,
-  //   userId: Ref<User>,
-  //   rating: number,
-  //   comment: string,
-  //   title: string,
-  //   images: string[] = []
-  // ) {
-  //   const review = {
-  //     user: userId,
-  //     rating,
-  //     comment,
-  //     title,
-  //     verified: false,
-  //     createdAt: new Date(),
-  //     images,
-  //     likes: 0,
-  //     helpful: 0,
-  //   };
-
-  //   this.reviews.push(review);
-  //   this.totalReviews = this.reviews.length;
-  //   await this.save();
-  //   return review;
-  // }
-
-  async updateStock(
-    this: DocumentType<Product>,
-    variantIndex: number,
-    quantity: number
-  ): Promise<boolean> {
-    // const variant = this.variants[variantIndex];
-    // if (!variant || variant.stock < quantity) {
-    //   return false;
-    // }
-
-    // variant.stock -= quantity;
-    this.totalSales += quantity;
-    await this.save();
-    return true;
-  }
-
-  // getVariantBySku(
-  //   this: DocumentType<Product>,
-  //   sku: string
-  // ): Variant | undefined {
-  //   return this.variants.find((variant) => variant.sku === sku);
-  // }
-
-  toJSON(this: DocumentType<Product>) {
-    const obj = this.toObject();
-
-    // obj.variants = obj.variants.map((variant: Variant, index: number) => ({
-    //   ...variant,
-    //   currentPrice: this.getCurrentPrice(index),
-    //   inStock: this.isInStock(index),
-    // }));
-
-    return obj;
+    const variantStock = (this.variants ?? []).reduce(
+      (total, variant) => total + (variant.quantity ?? 0),
+      0,
+    );
+    return this.quantity + variantStock;
   }
 }
 
 const ProductModel = getModelForClass(Product);
-
 export default ProductModel;
