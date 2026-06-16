@@ -24,7 +24,7 @@ import auth from "../middlewares/auth";
 import { hasPermission } from "../middlewares/hasPermissions";
 import { createAttributeRouter } from "../utils/routeBuilder.utils";
 import validateResource from "../middlewares/validateResource";
-import { createUserSchema } from "../schemas/auth.schemas";
+
 import {
   changePasswordSchema,
   IOnboardUserSchema,
@@ -88,12 +88,10 @@ get(
   getCustomerStatsHandler,
 );
 
-// ── Customer wishlist / saved items (auth only, self) ────────────────────────
 router.get("/wishlist", auth, getWishlistHandler);
 router.post("/wishlist/:productId", auth, addWishlistHandler);
 router.delete("/wishlist/:productId", auth, removeWishlistHandler);
 
-// ── Customer address book (auth only, self) ─────────────────────────────────
 router.get("/addresses", auth, getAddressesHandler);
 router.post(
   "/addresses",

@@ -3,6 +3,7 @@ import catchAsync from "../utils/error.utils";
 import UserModel from "../models/user.model";
 import AppError from "../errors/appError";
 import { Role } from "../models/role.model";
+import { Permission } from "../models/permission.model";
 
 export const hasPermission = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
@@ -20,8 +21,10 @@ export const hasPermission = catchAsync(
     const currentPath = req.route.path;
     const currentMethod = req.method.toUpperCase();
 
-    const hasDirect = role.permissions.some(
-      (p: any) => p.endpoint === currentPath && p.method === currentMethod,
+    const permissions = role.permissions as Permission[];
+    const hasDirect = permissions.some(
+      (p: Permission) =>
+        p.endpoint.endsWith(currentPath) && p.method === currentMethod,
     );
 
     if (!hasDirect && role.name !== "super-admin") {

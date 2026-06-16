@@ -25,6 +25,9 @@ type Config = {
   cloudinaryCloudName?: string;
   cloudinaryApiKey?: string;
   cloudinaryApiSecret?: string;
+  emailProvider: string;
+  emailRestrictRecipients: boolean;
+  emailAllowedRecipients: string[];
   emailFrom: string;
   sendgridApiKey: string;
   smtpHost: string;
@@ -58,7 +61,16 @@ const config: Config = {
   env: process.env.NODE_ENV || "development",
 
   dbUri: process.env.dbUri!,
-  allowedOrigins: process.env.frontendUrls?.split(",") as string[],
+  // Frontend origin allow-list for CORS (admin + storefront across
+  // dev/staging/prod). Comma-separated in `frontendUrls`. Falls back to the
+  // common local dev origins so a fresh checkout works without config.
+  allowedOrigins: (
+    process.env.frontendUrls ||
+    "http://localhost:3000,http://localhost:5173,http://localhost:5174"
+  )
+    .split(",")
+    .map((o) => o.trim())
+    .filter(Boolean),
 
   jwtSecret: process.env.JWT_SECRET!,
   jwtExpiresIn: process.env.jwtExpiresIn || "15m",
@@ -76,6 +88,30 @@ const config: Config = {
   cloudinaryApiKey: process.env.CLOUDINARY_API_KEY,
   cloudinaryApiSecret: process.env.CLOUDINARY_API_SECRET,
 
+  // Transport selector: "smtp" | "sendgrid" | "console".
+  // Defaults to sendgrid in production, smtp elsewhere; EMAIL_PROVIDER overrides.
+  emailProvider:
+    process.env.EMAIL_PROVIDER ||
+    (process.env.NODE_ENV === "production" ? "sendgrid" : "smtp"),
+  // Recipient guard. When enabled, real emails are only delivered to the
+  // addresses/domains in emailAllowedRecipients (everything else is skipped).
+  // Defaults to ON outside production; EMAIL_RESTRICT_RECIPIENTS overrides so
+  // staging can stay restricted even when NODE_ENV=production.
+  emailRestrictRecipients:
+    process.env.EMAIL_RESTRICT_RECIPIENTS !== undefined
+      ? process.env.EMAIL_RESTRICT_RECIPIENTS === "true"
+      : process.env.NODE_ENV !== "production",
+  // Allow-list entries may be whole domains ("yopmail.com") or exact addresses
+  // ("qa@edenhub.com"). EMAIL_ALLOWED_RECIPIENTS preferred; falls back to the
+  // legacy DEV_EMAIL_ALLOWED_DOMAINS. Default: yopmail.com.
+  emailAllowedRecipients: (
+    process.env.EMAIL_ALLOWED_RECIPIENTS ||
+    process.env.DEV_EMAIL_ALLOWED_DOMAINS ||
+    "yopmail.com"
+  )
+    .split(",")
+    .map((d) => d.trim().toLowerCase())
+    .filter(Boolean),
   emailFrom: process.env.EMAIL_FROM || "noreply@edenhub.com",
   sendgridApiKey: process.env.SENDGRID_API_KEY || "",
   smtpHost: process.env.SMTP_HOST || "smtp.example.com",
