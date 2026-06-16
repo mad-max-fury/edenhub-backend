@@ -114,11 +114,7 @@ export const verifyWebhookSignature = (
   const key = secret();
   if (!key || !signature) return false;
   try {
-    const hash = crypto
-      .createHmac("sha512", key)
-      // @ts-expect-error
-      .update(rawBody)
-      .digest("hex");
+    const hash = crypto.createHmac("sha512", key).update(rawBody).digest("hex");
     return hash === signature;
   } catch (err) {
     log.error(err, "Paystack signature verification error");
