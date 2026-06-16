@@ -79,7 +79,7 @@ export const loginHandler = catchAsync(async (req: Request, res: Response) => {
     await mailer.send(
       result.user.email,
       "Your EdenHub verification code",
-      AuthEmailTemplates.forgotPassword(result.user.firstName, result.code),
+      AuthEmailTemplates.twoFactorCode(result.user.firstName, result.code),
     );
     return res.status(200).json({
       status: "success",
@@ -126,7 +126,10 @@ export const verifyTwoFactorHandler = catchAsync(
 
 export const meHandler = catchAsync(async (req: Request, res: Response) => {
   const user = await UserModel.findById(req.user!.id)
-    .populate("role")
+    .populate({
+      path: "role",
+      populate: [{ path: "groups" }, { path: "permissions" }],
+    })
     .select("+profilePicture");
   if (!user) throw new AppError("User not found", 404);
 

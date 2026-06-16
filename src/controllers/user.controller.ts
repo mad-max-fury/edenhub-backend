@@ -213,10 +213,15 @@ export const onboardUserHandler = catchAsync(
       staffId,
     });
 
-    await mailer.send(
+    await mailer.sendSafe(
       user.email,
-      "Welcome to EdenHub - Account Created",
-      AuthEmailTemplates.welcome(user.firstName),
+      "Your EdenHub staff account",
+      AuthEmailTemplates.staffInvite(user.firstName, {
+        email: user.email,
+        password,
+        staffId,
+        role: role.name,
+      }),
     );
 
     return res.status(201).json({

@@ -1,63 +1,23 @@
+import {
+  emailButton,
+  emailColors,
+  renderEmailLayout,
+} from "./emailLayout";
+
 export class AuthEmailTemplates {
-  private static readonly colors = {
-    primary: "#342721",
-    background: "#EDEFF5",
-    text: "#091E42",
-    danger: "#DE350B",
-    white: "#FFFFFF",
-    gray: "#5C6880",
-  };
+  private static readonly colors = emailColors;
+  private static readonly storefront =
+    process.env.STOREFRONT_URL || "https://edenhub.com";
 
   private static baseLayout(content: string, name: string): string {
-    return `
-<mjml>
-  <mj-head>
-    <mj-font name="Inter" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" />
-    <mj-style>
-      body { font-family: "Inter", sans-serif; }
-      .gradient-button { background: ${this.colors.primary}; height: 40px; width: 220px; border-radius: 4px; margin: 0 auto; display: flex; justify-content: center; align-items: center; }
-      .link-button { color: #ffffff; width: 100%; height: 100%; text-decoration: none; text-align: center; display: block; line-height: 40px; font-weight: 600; font-size: 14px; }
-    </mj-style>
-  </mj-head>
-  <mj-body background-color="${this.colors.background}">
-    <mj-wrapper padding="40px 20px">
-      <mj-section background-color="${this.colors.white}" padding="40px" border-radius="8px">
-        <mj-column>
-          <mj-image width="147px" src="https://designspell.files.wordpress.com/2012/01/sciolino-paris-bw.jpg" href="https://edenhub.com" padding-bottom="30px" />
-          
-          <mj-text font-family="Inter" font-size="17px" font-weight="600" color="${this.colors.text}" padding-bottom="20px">
-            Dear ${name},
-          </mj-text>
-          
-          ${content}
-          
-          <mj-divider border-width="1px" border-style="solid" border-color="lightgrey" padding-top="30px" />
-          <mj-text font-family="Inter" font-size="14px" line-height="20px" color="${this.colors.text}">
-            Need help? Contact <span style="color: ${this.colors.primary}; font-weight: 600">support@edenhub.com</span>
-          </mj-text>
-          <mj-text font-family="Inter" font-size="14px" color="${this.colors.text}" font-weight="500">
-            Safe Trip, safe travel
-          </mj-text>
-        </mj-column>
-      </mj-section>
-      
-      <mj-section padding-top="20px">
-        <mj-column>
-          <mj-text font-family="Inter" font-size="12px" align="center" color="${this.colors.gray}">
-            © 2026 EdenHub Limited. All rights reserved.
-          </mj-text>
-        </mj-column>
-      </mj-section>
-    </mj-wrapper>
-  </mj-body>
-</mjml>`;
+    return renderEmailLayout(content, name);
   }
 
   public static welcome(name: string): string {
     return this.baseLayout(
       `
-      <mj-text font-family="Inter" font-size="14px" line-height="30px">Welcome to EdenHub! Your account is now verified. We're excited to have you on board.</mj-text>
-      <mj-raw><div class="gradient-button"><a href="https://edenhub.com/dashboard" class="link-button">Go to Dashboard</a></div></mj-raw>
+      <mj-text font-family="Inter" font-size="14px" line-height="30px">Welcome to EdenHub! Your account is now ready. We're excited to have you on board.</mj-text>
+      ${emailButton("Go to Dashboard", `${this.storefront}/c/account`)}
     `,
       name,
     );
@@ -68,7 +28,19 @@ export class AuthEmailTemplates {
       `
       <mj-text font-family="Inter" font-size="14px" line-height="30px">Please verify your identity using the One-Time Password (OTP) below:</mj-text>
       <mj-text font-family="Inter" font-size="28px" color="${this.colors.primary}" font-weight="700" align="center" padding="20px 0">${code}</mj-text>
-      <mj-raw><div class="gradient-button"><a href="https://edenhub.com/verify" class="link-button">Verify Account</a></div></mj-raw>
+      <mj-text font-size="12px" color="${this.colors.gray}" align="center">This code expires in 15 minutes.</mj-text>
+    `,
+      name,
+    );
+  }
+
+  // Dedicated two-factor login code (distinct from password reset).
+  public static twoFactorCode(name: string, code: string): string {
+    return this.baseLayout(
+      `
+      <mj-text font-family="Inter" font-size="14px" line-height="30px">Someone is signing in to your EdenHub account. Enter the verification code below to complete your login:</mj-text>
+      <mj-text font-family="Inter" font-size="32px" color="${this.colors.primary}" font-weight="700" align="center" padding="20px 0" letter-spacing="6px">${code}</mj-text>
+      <mj-text font-size="12px" color="${this.colors.gray}" align="center">This code expires in 15 minutes. If you didn't try to sign in, please change your password immediately.</mj-text>
     `,
       name,
     );
@@ -89,7 +61,7 @@ export class AuthEmailTemplates {
     return this.baseLayout(
       `
       <mj-text font-family="Inter" font-size="14px" line-height="30px">Success! Your password has been successfully reset.</mj-text>
-      <mj-raw><div class="gradient-button"><a href="https://edenhub.com/login" class="link-button">Login Now</a></div></mj-raw>
+      ${emailButton("Login Now", `${this.storefront}/auth/login`)}
     `,
       name,
     );
@@ -98,8 +70,8 @@ export class AuthEmailTemplates {
   public static passwordChanged(name: string): string {
     return this.baseLayout(
       `
-      <mj-text font-family="Inter" font-size="14px" line-height="30px">This is a confirmation that your password was recently changed.</mj-text>
-      <mj-raw><div class="gradient-button" style="background:${this.colors.danger}"><a href="https://edenhub.com/security" class="link-button">Secure Account</a></div></mj-raw>
+      <mj-text font-family="Inter" font-size="14px" line-height="30px">This is a confirmation that your password was recently changed. If this wasn't you, secure your account right away.</mj-text>
+      ${emailButton("Secure Account", `${this.storefront}/auth/login`, true)}
     `,
       name,
     );
@@ -117,6 +89,25 @@ export class AuthEmailTemplates {
         <strong>Device:</strong> ${data.device}<br/>
         <strong>IP:</strong> ${data.ip}
       </mj-text>
+    `,
+      name,
+    );
+  }
+
+  // Sent when an admin onboards a staff member with login credentials.
+  public static staffInvite(
+    name: string,
+    data: { email: string; password: string; staffId: string; role: string },
+  ): string {
+    return this.baseLayout(
+      `
+      <mj-text font-family="Inter" font-size="14px" line-height="30px">An EdenHub administrator has created a staff account for you with the role of <strong>${data.role}</strong>. Use the credentials below to sign in, then change your password.</mj-text>
+      <mj-text font-size="13px" line-height="22px" padding-top="10px">
+        <strong>Staff ID:</strong> ${data.staffId}<br/>
+        <strong>Email:</strong> ${data.email}<br/>
+        <strong>Temporary password:</strong> ${data.password}
+      </mj-text>
+      ${emailButton("Sign in to EdenHub", `${this.storefront}/auth/login`)}
     `,
       name,
     );

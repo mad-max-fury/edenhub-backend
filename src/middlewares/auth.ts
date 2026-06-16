@@ -42,12 +42,15 @@ const auth = async (req: Request, res: Response, next: NextFunction) => {
 
     next();
   } catch (err: any) {
+    // 401 = authentication problem (missing/invalid/expired token) so the
+    // client can attempt a token refresh. 403 is reserved for permission
+    // denials (see hasPermissions), which must NOT trigger a refresh.
     if (err.name === "JsonWebTokenError") {
-      return next(new AppError("Invalid token. Please log in again.", 403));
+      return next(new AppError("Invalid token. Please log in again.", 401));
     }
     if (err.name === "TokenExpiredError") {
       return next(
-        new AppError("Your token has expired. Please log in again.", 403),
+        new AppError("Your token has expired. Please log in again.", 401),
       );
     }
 
