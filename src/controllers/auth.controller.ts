@@ -4,6 +4,7 @@ import {
   createUser,
   generateVerificationCode,
   loginUser,
+  verifyTwoFactor,
   resetPassword,
   refreshAccessToken,
   signToken,
@@ -14,7 +15,9 @@ import {
 } from "../schemas/auth.schemas";
 import { findOneUser } from "../services/user.service";
 import AppError from "../errors/appError";
-import { User } from "../models/user.model";
+import UserModel, { User } from "../models/user.model";
+import { createAdminNotification } from "../services/notification.service";
+import { NotificationType } from "../models/notification.model";
 import { findRoleByName } from "../services/role.service";
 import { AuthEmailTemplates } from "../templates/authEmail.templates";
 import { mailer } from "../utils/mailer.utils";
@@ -45,6 +48,13 @@ export const createUserHandler = catchAsync(
 
     const user = await createUser({ ...userData, role: defaultRole?._id });
 
+    createAdminNotification({
+      type: NotificationType.Customer,
+      title: "New customer",
+      message: `${user.firstName} ${user.lastName} just signed up`,
+      link: "/admin/customers",
+    });
+
     await mailer.send(
       user.email,
       "Verify your EdenHub Account",
@@ -62,10 +72,23 @@ export const createUserHandler = catchAsync(
 export const loginHandler = catchAsync(async (req: Request, res: Response) => {
   const { email, password } = req.body;
 
-  const { user, groups, accessToken, refreshToken } = await loginUser(
-    email.toLowerCase(),
-    password,
-  );
+  const result = await loginUser(email.toLowerCase(), password);
+
+  // 2FA enabled — code was generated; email it and ask for verification.
+  if (result.twoFactorRequired) {
+    await mailer.send(
+      result.user.email,
+      "Your EdenHub verification code",
+      AuthEmailTemplates.forgotPassword(result.user.firstName, result.code),
+    );
+    return res.status(200).json({
+      status: "success",
+      message: "A verification code has been sent to your email",
+      data: { twoFactorRequired: true, email: result.user.email },
+    });
+  }
+
+  const { user, accessToken, refreshToken } = result;
 
   const loginData = {
     ip: req.ip || "Unknown",
@@ -82,9 +105,72 @@ export const loginHandler = catchAsync(async (req: Request, res: Response) => {
   return res.status(200).json({
     status: "success",
     message: "Login successful",
-    data: { user, accessToken, refreshToken },
+    data: { twoFactorRequired: false, user, accessToken, refreshToken },
   });
 });
+
+export const verifyTwoFactorHandler = catchAsync(
+  async (req: Request, res: Response) => {
+    const { email, code } = req.body;
+    const { user, accessToken, refreshToken } = await verifyTwoFactor(
+      email.toLowerCase(),
+      code,
+    );
+    return res.status(200).json({
+      status: "success",
+      message: "Login successful",
+      data: { user, accessToken, refreshToken },
+    });
+  },
+);
+
+export const meHandler = catchAsync(async (req: Request, res: Response) => {
+  const user = await UserModel.findById(req.user!.id)
+    .populate("role")
+    .select("+profilePicture");
+  if (!user) throw new AppError("User not found", 404);
+
+  return res.status(200).json({
+    status: "success",
+    message: "Profile retrieved successfully",
+    data: user.toJSON(),
+  });
+});
+
+export const updateMeHandler = catchAsync(
+  async (req: Request, res: Response) => {
+    const allowed = [
+      "firstName",
+      "lastName",
+      "phoneNumber",
+      "profilePicture",
+      "city",
+      "state",
+      "country",
+      "notificationPreferences",
+      "twoFactorEnabled",
+    ] as const;
+
+    const updates: Record<string, unknown> = {};
+    allowed.forEach((key) => {
+      if (req.body[key] !== undefined) updates[key] = req.body[key];
+    });
+
+    const user = await UserModel.findByIdAndUpdate(req.user!.id, updates, {
+      new: true,
+      runValidators: true,
+    })
+      .populate("role")
+      .select("+profilePicture");
+    if (!user) throw new AppError("User not found", 404);
+
+    return res.status(200).json({
+      status: "success",
+      message: "Profile updated successfully",
+      data: user.toJSON(),
+    });
+  },
+);
 
 export const generateVerificationCodeHandler = catchAsync(
   async (req: Request, res: Response) => {

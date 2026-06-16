@@ -7,6 +7,9 @@ import appErrorHandler from "./errors/appErrorHandler";
 import AppError from "./errors/appError";
 import { getConfig } from "./config";
 import { bootstrapPermissions } from "./utils/bootstrap.utils";
+import { ensureUserIndexes } from "./utils/ensureIndexes";
+import auditLogger from "./middlewares/auditLogger";
+import { paystackWebhookHandler } from "./controllers/order.controller";
 import cors from "cors";
 const session = require("express-session");
 const passport = require("passport");
@@ -37,6 +40,14 @@ const startServer = async () => {
     }),
   );
 
+  // Paystack webhook needs the raw body for signature verification, so it is
+  // mounted before the JSON body parser.
+  app.post(
+    "/api/order/webhook/paystack",
+    express.raw({ type: "*/*" }),
+    paystackWebhookHandler,
+  );
+
   app.use(express.json());
   app.use(express.urlencoded({ extended: false }));
 
@@ -55,7 +66,9 @@ const startServer = async () => {
   app.use(passport.session());
 
   await connectDocumentDB();
+  await ensureUserIndexes();
 
+  app.use(auditLogger);
   app.use(router);
 
   try {

@@ -2,11 +2,24 @@ import {
   changePasswordHandler,
   deleteUserHandler,
   getCustomersHandler,
+  getCustomerStatsHandler,
   getStaffHandler,
   getUserByIdHandler,
   onboardUserHandler,
   updateUserHandler,
+  getWishlistHandler,
+  addWishlistHandler,
+  removeWishlistHandler,
+  getAddressesHandler,
+  addAddressHandler,
+  updateAddressHandler,
+  deleteAddressHandler,
+  setDefaultAddressHandler,
 } from "../controllers/user.controller";
+import {
+  createAddressSchema,
+  updateAddressSchema,
+} from "../schemas/address.schema";
 import auth from "../middlewares/auth";
 import { hasPermission } from "../middlewares/hasPermissions";
 import { createAttributeRouter } from "../utils/routeBuilder.utils";
@@ -61,6 +74,41 @@ get(
   validateResource(paginationSchema),
   getStaffHandler,
 );
+
+get(
+  "/stats",
+  {
+    resource: "User",
+    action: "Read",
+    group: "User Management",
+    name: "get_customer_stats",
+  },
+  auth,
+  hasPermission,
+  getCustomerStatsHandler,
+);
+
+// ── Customer wishlist / saved items (auth only, self) ────────────────────────
+router.get("/wishlist", auth, getWishlistHandler);
+router.post("/wishlist/:productId", auth, addWishlistHandler);
+router.delete("/wishlist/:productId", auth, removeWishlistHandler);
+
+// ── Customer address book (auth only, self) ─────────────────────────────────
+router.get("/addresses", auth, getAddressesHandler);
+router.post(
+  "/addresses",
+  auth,
+  validateResource(createAddressSchema),
+  addAddressHandler,
+);
+router.patch(
+  "/addresses/:addressId",
+  auth,
+  validateResource(updateAddressSchema),
+  updateAddressHandler,
+);
+router.patch("/addresses/:addressId/default", auth, setDefaultAddressHandler);
+router.delete("/addresses/:addressId", auth, deleteAddressHandler);
 
 get(
   "/:id",
