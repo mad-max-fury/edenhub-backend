@@ -15,11 +15,38 @@ import {
   refreshTokenHandler,
   logoutHandler,
   googleVerifyHandler,
+  meHandler,
+  updateMeHandler,
+  verifyTwoFactorHandler,
 } from "../controllers/auth.controller";
 
 import { createAttributeRouter } from "../utils/routeBuilder.utils";
 
-const { router, post, patch } = createAttributeRouter();
+const { router, post, patch, get } = createAttributeRouter();
+
+get(
+  "/me",
+  {
+    resource: "Auth",
+    action: "Read",
+    group: "System Access",
+    name: "get_auth_me",
+  },
+  auth,
+  meHandler,
+);
+
+patch(
+  "/me",
+  {
+    resource: "Auth",
+    action: "Write",
+    group: "System Access",
+    name: "patch_auth_me",
+  },
+  auth,
+  updateMeHandler,
+);
 
 post(
   "/signup",
@@ -43,6 +70,17 @@ post(
   },
   validateResource(loginSchema),
   loginHandler,
+);
+
+post(
+  "/2fa/verify",
+  {
+    resource: "Auth",
+    action: "Read",
+    group: "System Access",
+    name: "post_auth_2fa_verify",
+  },
+  verifyTwoFactorHandler,
 );
 
 post(

@@ -16,6 +16,23 @@ export async function createUser(data: Partial<User>) {
   return await UserModel.create(data);
 }
 
+const issueTokens = (user: any) => {
+  const accessToken = signToken(
+    user.id,
+    getConfig("jwtExpiresIn") as jwt.SignOptions["expiresIn"],
+  );
+  const refreshToken = signToken(
+    user.id,
+    getConfig("jwtRefreshExpiresIn") as jwt.SignOptions["expiresIn"],
+  );
+  return {
+    user: user.toJSON(),
+    groups: (user.role as any)?.groups || [],
+    accessToken,
+    refreshToken,
+  };
+};
+
 export const loginUser = async (email: string, password: string) => {
   const user = await UserModel.findOne({ email })
     .select("+password")
@@ -29,24 +46,26 @@ export const loginUser = async (email: string, password: string) => {
   const isPasswordMatch = await user.comparePassword(password);
   if (!isPasswordMatch) throw new AppError("Invalid email or password", 401);
 
-  const accessToken = signToken(
-    user.id,
-    getConfig("jwtExpiresIn") as jwt.SignOptions["expiresIn"],
-  );
-  const refreshToken = signToken(
-    user.id,
-    getConfig("jwtRefreshExpiresIn") as jwt.SignOptions["expiresIn"],
-  );
+  // When 2FA is on, issue a one-time code and defer token issuance.
+  if (user.twoFactorEnabled) {
+    const code = Math.random().toString(36).substring(2, 8);
+    user.verificationCode = code;
+    await user.save();
+    return { twoFactorRequired: true as const, user: user.toJSON(), code };
+  }
 
-  const userJson = user.toJSON();
-  const groups = (user.role as any)?.groups || [];
+  return { twoFactorRequired: false as const, ...issueTokens(user) };
+};
 
-  return {
-    user: userJson,
-    groups,
-    accessToken,
-    refreshToken,
-  };
+export const verifyTwoFactor = async (email: string, code: string) => {
+  const user = await UserModel.findOne({ email, verificationCode: code }).populate(
+    { path: "role", populate: { path: "groups" } },
+  );
+  if (!user) throw new AppError("Invalid or expired code", 400);
+
+  user.verificationCode = undefined;
+  await user.save();
+  return issueTokens(user);
 };
 
 export const getUserProfile = async (userId: string) => {

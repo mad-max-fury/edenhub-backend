@@ -6,6 +6,15 @@ import {
   changeUserPassword,
   getStaffUsers,
   getCustomerUsers,
+  getCustomerStats,
+  getWishlist,
+  addToWishlist,
+  removeFromWishlist,
+  getAddresses,
+  addAddress,
+  updateAddress,
+  deleteAddress,
+  setDefaultAddress,
 } from "../services/user.service";
 
 import catchAsync from "../utils/error.utils";
@@ -43,6 +52,95 @@ export const getCustomersHandler = catchAsync(
       status: "success",
       message: "Customers retrieved successfully",
       data: { metadata, data: users },
+    });
+  },
+);
+
+export const getWishlistHandler = catchAsync(
+  async (req: Request, res: Response) => {
+    const wishlist = await getWishlist(req.user!.id);
+    res.status(200).json({ status: "success", data: wishlist });
+  },
+);
+
+export const addWishlistHandler = catchAsync(
+  async (req: Request, res: Response) => {
+    const wishlist = await addToWishlist(req.user!.id, req.params.productId);
+    res.status(200).json({
+      status: "success",
+      message: "Added to saved items",
+      data: wishlist,
+    });
+  },
+);
+
+export const removeWishlistHandler = catchAsync(
+  async (req: Request, res: Response) => {
+    const wishlist = await removeFromWishlist(
+      req.user!.id,
+      req.params.productId,
+    );
+    res.status(200).json({
+      status: "success",
+      message: "Removed from saved items",
+      data: wishlist,
+    });
+  },
+);
+
+export const getAddressesHandler = catchAsync(
+  async (req: Request, res: Response) => {
+    const addresses = await getAddresses(req.user!.id);
+    res.status(200).json({ status: "success", data: addresses });
+  },
+);
+
+export const addAddressHandler = catchAsync(
+  async (req: Request, res: Response) => {
+    const addresses = await addAddress(req.user!.id, req.body);
+    res.status(201).json({
+      status: "success",
+      message: "Address added",
+      data: addresses,
+    });
+  },
+);
+
+export const updateAddressHandler = catchAsync(
+  async (req: Request, res: Response) => {
+    const addresses = await updateAddress(
+      req.user!.id,
+      req.params.addressId,
+      req.body,
+    );
+    res.status(200).json({ status: "success", data: addresses });
+  },
+);
+
+export const deleteAddressHandler = catchAsync(
+  async (req: Request, res: Response) => {
+    const addresses = await deleteAddress(req.user!.id, req.params.addressId);
+    res.status(200).json({ status: "success", data: addresses });
+  },
+);
+
+export const setDefaultAddressHandler = catchAsync(
+  async (req: Request, res: Response) => {
+    const addresses = await setDefaultAddress(
+      req.user!.id,
+      req.params.addressId,
+    );
+    res.status(200).json({ status: "success", data: addresses });
+  },
+);
+
+export const getCustomerStatsHandler = catchAsync(
+  async (_req: Request, res: Response) => {
+    const stats = await getCustomerStats();
+    res.status(200).json({
+      status: "success",
+      message: "Customer stats retrieved successfully",
+      data: stats,
     });
   },
 );
