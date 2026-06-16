@@ -1,12 +1,28 @@
-import express from "express";
 import * as catalogCtrl from "../controllers/catalog.controller";
+import { createAttributeRouter } from "../utils/routeBuilder.utils";
 
-// Public storefront catalog — no auth, no permissions (guests can browse).
-const router = express.Router();
+// Public storefront catalog — no auth, no permission gate (guests can browse).
+const { router, get } = createAttributeRouter();
 
-router.get("/products", catalogCtrl.getCatalogProductsHandler);
-router.get("/products/:id", catalogCtrl.getCatalogProductByIdHandler);
-router.get("/categories", catalogCtrl.getCatalogCategoriesHandler);
-router.get("/brands", catalogCtrl.getCatalogBrandsHandler);
+const GROUP = "Catalog";
+const read = (name: string) => ({
+  resource: "Catalog",
+  action: "Read" as const,
+  group: GROUP,
+  name,
+});
+
+get("/products", read("get_catalog_products"), catalogCtrl.getCatalogProductsHandler);
+get(
+  "/products/:id",
+  read("get_catalog_product_by_id"),
+  catalogCtrl.getCatalogProductByIdHandler,
+);
+get(
+  "/categories",
+  read("get_catalog_categories"),
+  catalogCtrl.getCatalogCategoriesHandler,
+);
+get("/brands", read("get_catalog_brands"), catalogCtrl.getCatalogBrandsHandler);
 
 export default router;

@@ -38,7 +38,7 @@ export const loginUser = async (email: string, password: string) => {
     .select("+password")
     .populate({
       path: "role",
-      populate: { path: "groups" },
+      populate: [{ path: "groups" }, { path: "permissions" }],
     });
 
   if (!user) throw new AppError("Invalid email or password", 401);

@@ -96,8 +96,12 @@ async function main() {
         throw new Error("compiled HTML is suspiciously empty");
       }
       if (to) {
-        await mailer.send(to, `[TEST] ${subject}`, mjml);
-        console.log(`  ✓ ${label.padEnd(32)} compiled + sent to ${to}`);
+        const result: any = await mailer.send(to, `[TEST] ${subject}`, mjml);
+        if (result?.skipped) {
+          console.log(`  • ${label.padEnd(32)} compiled, send skipped (dev guard)`);
+        } else {
+          console.log(`  ✓ ${label.padEnd(32)} compiled + sent to ${to}`);
+        }
       } else {
         console.log(`  ✓ ${label.padEnd(32)} compiled (${html.length} bytes)`);
       }
@@ -109,7 +113,9 @@ async function main() {
 
   console.log(
     `\n${templates.length - failures}/${templates.length} templates OK` +
-      (to ? ` — delivered to ${to}` : " (compile-only; set TEST_EMAIL to send)") +
+      (to
+        ? ` — processed for ${to} (delivery subject to the dev recipient guard)`
+        : " (compile-only; set TEST_EMAIL to send)") +
       "\n",
   );
   process.exit(failures ? 1 : 0);

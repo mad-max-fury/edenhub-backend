@@ -126,7 +126,10 @@ export const verifyTwoFactorHandler = catchAsync(
 
 export const meHandler = catchAsync(async (req: Request, res: Response) => {
   const user = await UserModel.findById(req.user!.id)
-    .populate("role")
+    .populate({
+      path: "role",
+      populate: [{ path: "groups" }, { path: "permissions" }],
+    })
     .select("+profilePicture");
   if (!user) throw new AppError("User not found", 404);
 

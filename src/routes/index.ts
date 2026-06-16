@@ -14,6 +14,7 @@ import review from "./review.routes";
 import cart from "./cart.routes";
 import analytics from "./analytics.routes";
 import notification from "./notification.routes";
+import search from "./search.routes";
 const router = express.Router();
 
 router.get("/healthcheck", (_, res) => res.sendStatus(200));
@@ -32,4 +33,5 @@ router.use("/api/review/", review);
 router.use("/api/cart/", cart);
 router.use("/api/analytics/", analytics);
 router.use("/api/notification/", notification);
+router.use("/api/search/", search);
 export default router;
