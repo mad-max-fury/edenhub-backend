@@ -15,6 +15,11 @@ import { getConfig } from "../config";
 import { IPaginationQuery } from "../utils/pagination.utils";
 import { createAdminNotification } from "./notification.service";
 import { NotificationType } from "../models/notification.model";
+import { mailer } from "../utils/mailer.utils";
+import {
+  OrderEmailData,
+  OrderEmailTemplates,
+} from "../templates/orderEmail.templates";
 import {
   initializeTransaction,
   refundTransaction,
@@ -27,6 +32,45 @@ import {
 } from "../schemas/order.schema";
 
 const generateOrderNumber = () => `ORD-${nanoid(8).toUpperCase()}`;
+
+// Map an order document to the shape order email templates expect.
+const toOrderEmailData = (order: any): OrderEmailData => ({
+  orderNumber: order.orderNumber,
+  items: (order.items || []).map((i: OrderItem) => ({
+    name: i.name,
+    quantity: i.quantity,
+    unitPrice: i.unitPrice,
+    lineTotal: i.lineTotal,
+  })),
+  subtotal: order.subtotal,
+  discountTotal: order.discountTotal,
+  shippingFee: order.shippingFee,
+  taxAmount: order.taxAmount,
+  grandTotal: order.grandTotal,
+  shippingAddress: order.shippingAddress,
+  shipment: order.shipment,
+});
+
+// Resolve the customer's email + first name (populating if needed), then
+// hand them to a builder and send the resulting template. Fire-and-forget.
+const emailCustomer = async (
+  order: any,
+  subject: string,
+  build: (firstName: string, data: OrderEmailData) => string,
+) => {
+  let customer = order.customer;
+  if (!customer || typeof customer === "string" || !("email" in customer)) {
+    customer = await UserModel.findById(order.customer).select(
+      "firstName email",
+    );
+  }
+  if (!customer?.email) return;
+  await mailer.sendSafe(
+    customer.email,
+    subject,
+    build(customer.firstName || "there", toOrderEmailData(order)),
+  );
+};
 
 // Effective unit price honouring an active discount.
 const effectivePrice = (source: {
@@ -227,6 +271,12 @@ export const createOrder = async (data: CreateOrderInput) => {
     log.error(err, "Paystack initialize failed; order left pending");
   }
 
+  await emailCustomer(
+    { ...order.toObject(), customer },
+    `Order ${orderNumber} confirmed`,
+    OrderEmailTemplates.orderConfirmation,
+  );
+
   return order.populate("customer", "firstName lastName email");
 };
 
@@ -379,6 +429,14 @@ export const updateOrderStatus = async (
   order.status = status;
   pushTimeline(order, "status", `Order marked ${status}`, by);
   await order.save();
+
+  if (status === OrderStatus.Cancelled) {
+    await emailCustomer(
+      order,
+      `Order ${order.orderNumber} cancelled`,
+      OrderEmailTemplates.orderCancelled,
+    );
+  }
   return order;
 };
 
@@ -415,6 +473,14 @@ export const updateFulfillmentStatus = async (
   }
   pushTimeline(order, "fulfillment", `Fulfillment marked ${fulfillmentStatus}`, by);
   await order.save();
+
+  if (fulfillmentStatus === FulfillmentStatus.Delivered) {
+    await emailCustomer(
+      order,
+      `Order ${order.orderNumber} delivered`,
+      OrderEmailTemplates.orderDelivered,
+    );
+  }
   return order;
 };
 
@@ -432,6 +498,12 @@ const applyPaidState = async (order: any) => {
     message: `${order.orderNumber} · ₦${order.grandTotal.toLocaleString()}`,
     link: `/admin/orders/${order._id}`,
   });
+
+  await emailCustomer(
+    order,
+    `Payment received for ${order.orderNumber}`,
+    OrderEmailTemplates.paymentReceipt,
+  );
 };
 
 export const verifyPayment = async (id: string) => {
@@ -482,6 +554,13 @@ export const refundOrder = async (id: string, amount?: number, by?: string) => {
     by,
   );
   await order.save();
+
+  await emailCustomer(
+    order,
+    `Refund issued for ${order.orderNumber}`,
+    (firstName, data) =>
+      OrderEmailTemplates.refundIssued(firstName, data, amount),
+  );
   return order;
 };
 
@@ -522,6 +601,12 @@ export const shipOrder = async (
   order.fulfillmentStatus = FulfillmentStatus.Shipped;
   pushTimeline(order, "fulfillment", "Shipment booked via Shipbubble", by);
   await order.save();
+
+  await emailCustomer(
+    order,
+    `Your order ${order.orderNumber} has shipped`,
+    OrderEmailTemplates.orderShipped,
+  );
   return order;
 };
 
@@ -536,11 +621,19 @@ export const trackOrder = async (id: string) => {
 
   // Best-effort status mapping.
   const status = String(tracking?.status || "").toLowerCase();
-  if (status.includes("deliver")) {
+  if (
+    status.includes("deliver") &&
+    order.fulfillmentStatus !== FulfillmentStatus.Delivered
+  ) {
     order.fulfillmentStatus = FulfillmentStatus.Delivered;
     order.shipment.deliveredAt = new Date();
     if (order.status === OrderStatus.Processing) order.status = OrderStatus.Completed;
     await order.save();
+    await emailCustomer(
+      order,
+      `Order ${order.orderNumber} delivered`,
+      OrderEmailTemplates.orderDelivered,
+    );
   }
 
   return { order, tracking };

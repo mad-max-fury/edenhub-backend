@@ -17,9 +17,11 @@ export class MailerService {
     if (this.isProd) {
       sgMail.setApiKey(getConfig("sendgridApiKey"));
     } else {
+      const smtpPort = getConfig("smtpPort");
       this.nodemailerTransporter = nodemailer.createTransport({
         host: getConfig("smtpHost"),
-        port: getConfig("smtpPort"),
+        port: smtpPort,
+        secure: smtpPort === 465, // 465 = implicit TLS; 587 upgrades via STARTTLS
         auth: {
           user: getConfig("smtpUser"),
           pass: getConfig("smtpPass"),
@@ -54,6 +56,22 @@ export class MailerService {
       }
     }
     return html;
+  }
+
+  // Compile an MJML template to HTML without sending — used to validate
+  // every template renders before relying on it in a live flow.
+  public renderHtml(mjmlTemplate: string): string {
+    return this.compileMjml(mjmlTemplate);
+  }
+
+  // Fire-and-forget send: never throws, so transactional flows (orders,
+  // payments) are not aborted by an email delivery hiccup.
+  public async sendSafe(to: string, subject: string, mjmlTemplate: string) {
+    try {
+      await this.send(to, subject, mjmlTemplate);
+    } catch (error: any) {
+      console.error(`Non-blocking email failed to ${to}:`, error?.message);
+    }
   }
 
   public async send(to: string, subject: string, mjmlTemplate: string) {

@@ -79,7 +79,7 @@ export const loginHandler = catchAsync(async (req: Request, res: Response) => {
     await mailer.send(
       result.user.email,
       "Your EdenHub verification code",
-      AuthEmailTemplates.forgotPassword(result.user.firstName, result.code),
+      AuthEmailTemplates.twoFactorCode(result.user.firstName, result.code),
     );
     return res.status(200).json({
       status: "success",
