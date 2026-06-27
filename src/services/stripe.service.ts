@@ -94,5 +94,5 @@ export const constructWebhookEvent = (
   if (!webhookSecret) {
     throw new AppError("Stripe webhook secret not configured", 500);
   }
-  return stripe.webhooks.constructEvent(rawBody, signature, webhookSecret);
+  return stripe.webhooks.constructEvent(rawBody as any, signature, webhookSecret);
 };

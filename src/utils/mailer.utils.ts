@@ -105,7 +105,7 @@ export class MailerService {
     if (errors.length > 0) {
       log.warn(
         "MJML Warnings:",
-        errors.map((e) => e.message),
+        errors.map((e: any) => e.message),
       );
 
       if (!html) {
