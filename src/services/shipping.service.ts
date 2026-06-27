@@ -54,6 +54,13 @@ export const validateAddress = async (
 let cachedOriginCode: string | null = null;
 export const getOriginAddressCode = async (): Promise<string> => {
   if (cachedOriginCode) return cachedOriginCode;
+
+  const presetCode = process.env.SHIP_ORIGIN_ADDRESS_CODE;
+  if (presetCode) {
+    cachedOriginCode = presetCode;
+    return cachedOriginCode;
+  }
+
   const origin = getConfig("shipOrigin");
   cachedOriginCode = await validateAddress({
     name: origin.name,

@@ -13,6 +13,8 @@ export const createAddressSchema = object({
     state: string({ required_error: "State is required" }).trim().min(1),
     country: string().trim().default("Nigeria"),
     postalCode: string().trim().optional(),
+    email: string().email().optional(),
+    addressCode: string().trim().optional(),
     isDefault: boolean().optional(),
   }),
 });
@@ -24,12 +26,14 @@ export const updateAddressSchema = object({
     fullName: string().trim().optional(),
     phone: string().trim().optional(),
     additionalPhone: string().trim().optional(),
+    email: string().email().optional(),
     address: string().trim().min(1).optional(),
     landmark: string().trim().optional(),
     city: string().trim().min(1).optional(),
     state: string().trim().min(1).optional(),
     country: string().trim().optional(),
     postalCode: string().trim().optional(),
+    addressCode: string().trim().optional(),
     isDefault: boolean().optional(),
   }),
 });

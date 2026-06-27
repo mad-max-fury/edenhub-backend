@@ -48,6 +48,12 @@ export class UserAddress {
   @prop({ trim: true })
   postalCode?: string;
 
+  @prop({ trim: true })
+  email?: string;
+
+  @prop({ trim: true })
+  addressCode?: string;
+
   @prop({ default: false })
   isDefault: boolean;
 }
