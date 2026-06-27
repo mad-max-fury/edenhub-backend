@@ -27,7 +27,7 @@ const ALLOWED_TYPES = [
 
 export const uploadMiddleware = multer({
   storage,
-  fileFilter: (_req, file, cb) => {
+  fileFilter: (_req: any, file: any, cb: any) => {
     if (ALLOWED_TYPES.includes(file.mimetype)) {
       cb(null, true);
     } else {

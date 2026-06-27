@@ -13,7 +13,7 @@ import path from "path";
 
 export const uploadResource = catchAsync(
   async (req: Request, res: Response) => {
-    const file = (req as any).file as Express.Multer.File | undefined;
+    const file = (req as any).file as { buffer: Buffer; mimetype: string; originalname: string } | undefined;
     if (!file) throw new AppError("No file uploaded", 400);
 
     const resourceType = (req.query?.type as string) || "general";
