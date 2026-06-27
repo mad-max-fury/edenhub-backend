@@ -12,14 +12,28 @@ const objectId = (label: string) =>
   });
 
 const addressSchema = object({
-  fullName: string({ required_error: "Recipient name is required" }).trim().min(1),
-  phone: string().trim().optional(),
+  firstName: string().trim().optional().default(""),
+  lastName: string().trim().optional().default(""),
+  fullName: string().trim().optional(),
+  phone: string({ required_error: "Phone is required" }).trim().min(1),
+  additionalPhone: string().trim().optional(),
   email: string().email().optional(),
   address: string({ required_error: "Address is required" }).trim().min(1),
+  landmark: string().trim().optional(),
   city: string({ required_error: "City is required" }).trim().min(1),
-  state: string({ required_error: "State is required" }).trim().min(1),
+  state: string({ required_error: "State/Region is required" }).trim().min(1),
   country: string().trim().default("Nigeria"),
   postalCode: string().trim().optional(),
+}).transform((data) => {
+  if (!data.firstName && !data.lastName && data.fullName) {
+    const parts = data.fullName.trim().split(/\s+/);
+    data.firstName = parts[0] || "";
+    data.lastName = parts.slice(1).join(" ") || parts[0] || "";
+  }
+  if (!data.fullName && data.firstName) {
+    data.fullName = `${data.firstName} ${data.lastName || ""}`.trim();
+  }
+  return data;
 });
 
 const orderItemSchema = object({
@@ -27,11 +41,16 @@ const orderItemSchema = object({
   variantId: string().trim().optional(),
   quantity: number().int().min(1),
   attributes: record(z.any()).optional(),
+  engraving: object({
+    font: string().trim().optional(),
+    lines: array(string()).optional(),
+  }).optional(),
 });
 
 const selectedCourierSchema = object({
   courierId: string(),
   courierName: string().optional(),
+  courierLogo: string().optional(),
   serviceCode: string(),
   requestToken: string(),
   amount: number().min(0),
@@ -55,6 +74,7 @@ export const createOrderSchema = object({
     discountTotal: number().min(0).optional(),
     taxAmount: number().min(0).optional(),
     customerNote: string().trim().optional(),
+    paymentProvider: z.enum(["paystack", "stripe"]).default("paystack").optional(),
   }),
 });
 

@@ -26,7 +26,8 @@ export const uploadResource = catchAsync(
     let originalName = path.parse(req.file.originalname).name;
     let extension = path.extname(req.file.originalname);
 
-    if (req.file.mimetype.startsWith("image/")) {
+    const isRasterImage = /^image\/(jpeg|png|webp|bmp|tiff)$/.test(req.file.mimetype);
+    if (isRasterImage) {
       contentType = "image/webp";
       extension = ".webp";
 

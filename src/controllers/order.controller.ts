@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import catchAsync from "../utils/error.utils";
 import * as orderService from "../services/order.service";
 import { verifyWebhookSignature } from "../services/payment.service";
+import * as stripeService from "../services/stripe.service";
 import {
   getPaginationMetadata,
   IPaginationQuery,
@@ -21,7 +22,6 @@ export const fetchRatesHandler = catchAsync(
 
 export const createOrderHandler = catchAsync(
   async (req: Request, res: Response) => {
-    // The authenticated buyer owns the order.
     const order = await orderService.createOrder({
       ...req.body,
       customer: req.user!.id,
@@ -85,6 +85,17 @@ export const verifyMyOrderHandler = catchAsync(
   },
 );
 
+export const cancelMyOrderHandler = catchAsync(
+  async (req: Request, res: Response) => {
+    const order = await orderService.customerCancelOrder(
+      req.user!.id,
+      req.params.id,
+      req.body.reason,
+    );
+    res.status(200).json({ status: "success", message: "Order cancelled", data: order });
+  },
+);
+
 export const getOrdersHandler = catchAsync(
   async (req: Request, res: Response) => {
     const base: IPaginationQuery = {
@@ -100,6 +111,7 @@ export const getOrdersHandler = catchAsync(
       paymentStatus: req.query.paymentStatus as string,
       fulfillmentStatus: req.query.fulfillmentStatus as string,
       customer: req.query.customer as string,
+      product: req.query.product as string,
     });
 
     const metadata = getPaginationMetadata(
@@ -123,6 +135,17 @@ export const getOrderStatsHandler = catchAsync(
       status: "success",
       message: "Order stats retrieved successfully",
       data: stats,
+    });
+  },
+);
+
+export const reconcilePendingHandler = catchAsync(
+  async (_req: Request, res: Response) => {
+    const result = await orderService.reconcilePendingPayments();
+    res.status(200).json({
+      status: "success",
+      message: `Reconciled ${result.checked} pending order(s): ${result.paid} paid, ${result.cancelled} cancelled, ${result.untouched} still awaiting payment`,
+      data: result,
     });
   },
 );
@@ -245,13 +268,29 @@ export const paystackWebhookHandler = async (req: Request, res: Response) => {
     }
 
     const event = JSON.parse(raw.toString("utf8"));
-    // Acknowledge immediately; process async.
     res.sendStatus(200);
     orderService
       .handlePaystackWebhook(event)
       .catch((err) => log.error(err, "Paystack webhook processing failed"));
   } catch (err) {
     log.error(err, "Paystack webhook error");
+    if (!res.headersSent) res.sendStatus(400);
+  }
+};
+
+// Public, raw-body Stripe webhook (mounted before the JSON parser).
+export const stripeWebhookHandler = async (req: Request, res: Response) => {
+  try {
+    const signature = req.headers["stripe-signature"] as string;
+    const raw = req.body as Buffer;
+
+    const event = stripeService.constructWebhookEvent(raw, signature);
+    res.sendStatus(200);
+    orderService
+      .handleStripeWebhook(event)
+      .catch((err) => log.error(err, "Stripe webhook processing failed"));
+  } catch (err) {
+    log.error(err, "Stripe webhook error");
     if (!res.headersSent) res.sendStatus(400);
   }
 };

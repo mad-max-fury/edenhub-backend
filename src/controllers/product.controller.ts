@@ -152,3 +152,26 @@ export const removeVariantHandler = catchAsync(
     });
   },
 );
+
+export const bulkUpdateStatusHandler = catchAsync(
+  async (req: Request, res: Response) => {
+    const { ids, status } = req.body;
+    const result = await productService.bulkUpdateStatus(ids, status);
+    res.json({ status: "success", data: result });
+  },
+);
+
+export const bulkUpdateDiscountHandler = catchAsync(
+  async (req: Request, res: Response) => {
+    const { ids, percentage } = req.body;
+    const result = await productService.bulkUpdateDiscount(ids, percentage);
+    res.json({ status: "success", data: result });
+  },
+);
+
+export const getLowStockHandler = catchAsync(
+  async (_req: Request, res: Response) => {
+    const products = await productService.getLowStockProducts();
+    res.json({ status: "success", data: products });
+  },
+);

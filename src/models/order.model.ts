@@ -65,20 +65,36 @@ export class OrderItem {
 
   @prop({ type: () => Object, default: {} })
   attributes: Record<string, unknown>;
+
+  // Snapshot of the engraving applied to this line, if any.
+  @prop({ type: () => Object, default: undefined })
+  engraving?: { font?: string; lines: string[]; fee: number };
 }
 
 export class Address {
-  @prop({ required: true })
-  fullName: string;
+  @prop()
+  firstName?: string;
+
+  @prop()
+  lastName?: string;
+
+  @prop()
+  fullName?: string;
 
   @prop()
   phone?: string;
+
+  @prop()
+  additionalPhone?: string;
 
   @prop()
   email?: string;
 
   @prop({ required: true })
   address: string;
+
+  @prop()
+  landmark?: string;
 
   @prop({ required: true })
   city: string;
@@ -92,7 +108,6 @@ export class Address {
   @prop()
   postalCode?: string;
 
-  // Shipbubble validated address code (set when rates are fetched).
   @prop()
   addressCode?: string;
 }
@@ -114,6 +129,9 @@ export class Shipment {
 
   @prop()
   shipbubbleOrderId?: string;
+
+  @prop()
+  courierLogo?: string;
 
   @prop()
   trackingNumber?: string;

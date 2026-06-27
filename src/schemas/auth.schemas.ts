@@ -52,16 +52,16 @@ export const forgotPasswordSchema = object({
 
 export const resetPasswordSchema = object({
   body: object({
-    password: string({ required_error: "Password is required" }).min(
+    email: string({ required_error: "Email is required" }).email(
+      "Invalid email format",
+    ),
+    newPassword: string({ required_error: "Password is required" }).min(
       6,
       "Password must be at least 6 characters long",
     ),
-    passwordConfirmation: string({
-      required_error: "Password confirmation is required",
+    verificationCode: string({
+      required_error: "Verification code is required",
     }),
-  }).refine((data) => data.password === data.passwordConfirmation, {
-    message: "Passwords do not match",
-    path: ["passwordConfirmation"],
   }),
 });
 

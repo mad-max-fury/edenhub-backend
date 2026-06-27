@@ -9,6 +9,17 @@ import {
 import { User } from "./user.model";
 import { Product } from "./product.model";
 
+export class Engraving {
+  @prop()
+  font?: string;
+
+  @prop({ type: () => [String], default: [] })
+  lines: string[];
+
+  @prop({ default: 0 })
+  fee: number;
+}
+
 export class CartItem {
   @prop({ ref: () => Product, required: true })
   product: Ref<Product>;
@@ -18,6 +29,9 @@ export class CartItem {
 
   @prop({ required: true, default: 1, min: 1 })
   quantity: number;
+
+  @prop({ type: () => Engraving, _id: false })
+  engraving?: Engraving;
 }
 
 @index({ user: 1 }, { unique: true })

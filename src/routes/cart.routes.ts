@@ -5,6 +5,7 @@ import { createAttributeRouter } from "../utils/routeBuilder.utils";
 import {
   addCartItemSchema,
   cartItemParamSchema,
+  setEngravingSchema,
   updateCartItemSchema,
 } from "../schemas/cart.schema";
 
@@ -31,6 +32,12 @@ patch(
   meta("patch_cart_update_item", "Update"),
   validateResource(updateCartItemSchema),
   cartCtrl.updateCartItemHandler,
+);
+patch(
+  "/items/:itemId/engraving",
+  meta("patch_cart_engraving", "Update"),
+  validateResource(setEngravingSchema),
+  cartCtrl.setEngravingHandler,
 );
 destroy(
   "/items/:itemId",

@@ -16,13 +16,25 @@ import { Role } from "./role.model";
 
 export class UserAddress {
   @prop({ required: true, trim: true })
-  fullName: string;
+  firstName: string;
+
+  @prop({ required: true, trim: true })
+  lastName: string;
+
+  @prop({ trim: true })
+  fullName?: string;
 
   @prop({ trim: true })
   phone?: string;
 
+  @prop({ trim: true })
+  additionalPhone?: string;
+
   @prop({ required: true, trim: true })
   address: string;
+
+  @prop({ trim: true })
+  landmark?: string;
 
   @prop({ required: true, trim: true })
   city: string;
@@ -123,6 +135,21 @@ export class User {
 
   @prop({ default: false })
   twoFactorEnabled: boolean;
+
+  @prop({ default: "email" })
+  twoFactorMethod: string;
+
+  @prop()
+  twoFactorSecret?: string;
+
+  @prop()
+  deletionRequestedAt?: Date;
+
+  @prop()
+  deletionReason?: string;
+
+  @prop()
+  googleId?: string;
 
   @prop({ ref: () => Product, default: [] })
   wishlist: Ref<Product>[];

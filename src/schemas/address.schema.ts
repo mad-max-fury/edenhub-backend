@@ -2,9 +2,13 @@ import { boolean, object, string, TypeOf } from "zod";
 
 export const createAddressSchema = object({
   body: object({
-    fullName: string({ required_error: "Full name is required" }).trim().min(1),
-    phone: string().trim().optional(),
+    firstName: string({ required_error: "First name is required" }).trim().min(1),
+    lastName: string({ required_error: "Last name is required" }).trim().min(1),
+    fullName: string().trim().optional(),
+    phone: string({ required_error: "Phone is required" }).trim().min(1),
+    additionalPhone: string().trim().optional(),
     address: string({ required_error: "Address is required" }).trim().min(1),
+    landmark: string().trim().optional(),
     city: string({ required_error: "City is required" }).trim().min(1),
     state: string({ required_error: "State is required" }).trim().min(1),
     country: string().trim().default("Nigeria"),
@@ -15,9 +19,13 @@ export const createAddressSchema = object({
 
 export const updateAddressSchema = object({
   body: object({
-    fullName: string().trim().min(1).optional(),
+    firstName: string().trim().min(1).optional(),
+    lastName: string().trim().min(1).optional(),
+    fullName: string().trim().optional(),
     phone: string().trim().optional(),
+    additionalPhone: string().trim().optional(),
     address: string().trim().min(1).optional(),
+    landmark: string().trim().optional(),
     city: string().trim().min(1).optional(),
     state: string().trim().min(1).optional(),
     country: string().trim().optional(),

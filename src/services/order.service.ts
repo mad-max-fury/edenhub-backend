@@ -25,15 +25,12 @@ import {
   refundTransaction,
   verifyTransaction,
 } from "./payment.service";
+import * as stripeService from "./stripe.service";
 import * as shipping from "./shipping.service";
-import {
-  CreateOrderInput,
-  FetchRatesInput,
-} from "../schemas/order.schema";
+import { CreateOrderInput, FetchRatesInput } from "../schemas/order.schema";
 
 const generateOrderNumber = () => `ORD-${nanoid(8).toUpperCase()}`;
 
-// Map an order document to the shape order email templates expect.
 const toOrderEmailData = (order: any): OrderEmailData => ({
   orderNumber: order.orderNumber,
   items: (order.items || []).map((i: OrderItem) => ({
@@ -51,8 +48,6 @@ const toOrderEmailData = (order: any): OrderEmailData => ({
   shipment: order.shipment,
 });
 
-// Resolve the customer's email + first name (populating if needed), then
-// hand them to a builder and send the resulting template. Fire-and-forget.
 const emailCustomer = async (
   order: any,
   subject: string,
@@ -72,7 +67,6 @@ const emailCustomer = async (
   );
 };
 
-// Effective unit price honouring an active discount.
 const effectivePrice = (source: {
   basePrice: number;
   discount?: { price?: number; startDate?: Date; endDate?: Date };
@@ -87,7 +81,6 @@ const effectivePrice = (source: {
   return source.basePrice;
 };
 
-// direction: -1 to reserve (decrement), +1 to restore.
 const adjustStock = async (items: OrderItem[], direction: 1 | -1) => {
   for (const item of items) {
     if (!item.product) continue;
@@ -97,16 +90,20 @@ const adjustStock = async (items: OrderItem[], direction: 1 | -1) => {
     if (item.variantId) {
       const variant = (product.variants as any).id(item.variantId);
       if (variant) {
-        variant.quantity = Math.max(0, variant.quantity + direction * item.quantity);
+        variant.quantity = Math.max(
+          0,
+          variant.quantity + direction * item.quantity,
+        );
       }
     } else {
-      product.quantity = Math.max(0, product.quantity + direction * item.quantity);
+      product.quantity = Math.max(
+        0,
+        product.quantity + direction * item.quantity,
+      );
     }
     await product.save();
   }
 };
-
-// ─── Rates ─────────────────────────────────────────────────────────────────
 
 export const getRates = async (input: FetchRatesInput) => {
   const rateItems = [];
@@ -133,20 +130,20 @@ export const getRates = async (input: FetchRatesInput) => {
   }
 
   const r = input.receiver;
+  const receiverName = r.fullName || `${r.firstName} ${r.lastName}`;
   return shipping.fetchRates({
     receiver: {
-      name: r.fullName,
+      name: receiverName,
       email: r.email || getOrFallbackEmail(),
       phone: r.phone || "08000000000",
       address: `${r.address}, ${r.city}, ${r.state}, ${r.country}`,
     },
     items: rateItems,
+    country: r.country,
   });
 };
 
 const getOrFallbackEmail = () => "customer@edenhub.com";
-
-// ─── Create ────────────────────────────────────────────────────────────────
 
 export const createOrder = async (data: CreateOrderInput) => {
   const customer = await UserModel.findById(data.customer);
@@ -182,7 +179,22 @@ export const createOrder = async (data: CreateOrderInput) => {
       throw new AppError(`Insufficient stock for ${product.name}`, 400);
     }
 
-    const lineTotal = unitPrice * line.quantity;
+    // Apply engraving only when the product offers it, using its configured fee.
+    const eng = (product as any).engraving;
+    const reqLines = ((line as any).engraving?.lines ?? [])
+      .map((l: string) => (l ?? "").trim())
+      .filter(Boolean);
+    const engraving =
+      eng?.available && reqLines.length > 0
+        ? {
+            font: (line as any).engraving?.font,
+            lines: reqLines,
+            fee: eng.fee ?? 0,
+          }
+        : undefined;
+
+    const engravingFee = engraving?.fee ?? 0;
+    const lineTotal = (unitPrice + engravingFee) * line.quantity;
     subtotal += lineTotal;
     items.push({
       product: product._id,
@@ -194,6 +206,7 @@ export const createOrder = async (data: CreateOrderInput) => {
       quantity: line.quantity,
       lineTotal,
       attributes: line.attributes || {},
+      engraving,
     } as OrderItem);
   }
 
@@ -205,7 +218,6 @@ export const createOrder = async (data: CreateOrderInput) => {
     subtotal - discountTotal + shippingFee + taxAmount,
   );
 
-  // Reserve stock before creating the order.
   await adjustStock(items, -1);
 
   const orderNumber = generateOrderNumber();
@@ -224,6 +236,7 @@ export const createOrder = async (data: CreateOrderInput) => {
     shipment: data.selectedCourier
       ? {
           courier: data.selectedCourier.courierName,
+          courierLogo: data.selectedCourier.courierLogo,
           courierId: data.selectedCourier.courierId,
           serviceCode: data.selectedCourier.serviceCode,
           requestToken: data.selectedCourier.requestToken,
@@ -240,7 +253,6 @@ export const createOrder = async (data: CreateOrderInput) => {
     meta: { orderId: String(order._id) },
   });
 
-  // Notify on any product that dropped below the low-stock threshold.
   const lowStock = await ProductModel.find({
     _id: { $in: items.map((i) => i.product) },
     quantity: { $lt: 5 },
@@ -254,21 +266,38 @@ export const createOrder = async (data: CreateOrderInput) => {
     }),
   );
 
-  // Initialize payment. If Paystack isn't configured we keep the order as
-  // pending so it can still be managed (and paid via manual verify later).
+  const provider = data.paymentProvider || "paystack";
+  order.paymentProvider = provider;
+
   try {
-    const init = await initializeTransaction({
-      email: customer.email,
-      amount: grandTotal,
-      reference: orderNumber,
-      metadata: { orderId: String(order._id), customerId: String(customer._id) },
-      callbackUrl: `${getConfig("storefrontUrl")}/checkout/callback`,
-    });
-    order.paymentReference = init.reference;
-    order.paymentAuthorizationUrl = init.authorizationUrl;
+    const callbackUrl = `${getConfig("storefrontUrl")}/checkout/callback`;
+    if (provider === "stripe") {
+      const session = await stripeService.createCheckoutSession({
+        email: customer.email,
+        amount: grandTotal,
+        reference: orderNumber,
+        orderId: String(order._id),
+        callbackUrl,
+      });
+      order.paymentReference = orderNumber;
+      order.paymentAuthorizationUrl = session.url;
+    } else {
+      const init = await initializeTransaction({
+        email: customer.email,
+        amount: grandTotal,
+        reference: orderNumber,
+        metadata: {
+          orderId: String(order._id),
+          customerId: String(customer._id),
+        },
+        callbackUrl,
+      });
+      order.paymentReference = init.reference;
+      order.paymentAuthorizationUrl = init.authorizationUrl;
+    }
     await order.save();
   } catch (err) {
-    log.error(err, "Paystack initialize failed; order left pending");
+    log.error(err, `${provider} payment initialize failed; order left pending`);
   }
 
   await emailCustomer(
@@ -280,13 +309,12 @@ export const createOrder = async (data: CreateOrderInput) => {
   return order.populate("customer", "firstName lastName email");
 };
 
-// ─── Read ──────────────────────────────────────────────────────────────────
-
 export interface OrderListQuery extends IPaginationQuery {
   status?: string;
   paymentStatus?: string;
   fulfillmentStatus?: string;
   customer?: string;
+  product?: string;
 }
 
 export const getAllOrders = async (query: OrderListQuery) => {
@@ -299,12 +327,23 @@ export const getAllOrders = async (query: OrderListQuery) => {
     paymentStatus,
     fulfillmentStatus,
     customer,
+    product,
   } = query;
 
   const filter: FilterQuery<Order> = {};
   if (status && status !== "all") filter.status = status;
   if (paymentStatus) filter.paymentStatus = paymentStatus;
-  if (fulfillmentStatus) filter.fulfillmentStatus = fulfillmentStatus;
+  if (product) filter["items.product"] = product;
+  if (fulfillmentStatus) {
+    // Accept a comma-separated list (e.g. "shipped,delivered") so a tab can
+    // group several fulfillment states together.
+    const statuses = fulfillmentStatus
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean);
+    filter.fulfillmentStatus =
+      statuses.length > 1 ? { $in: statuses } : statuses[0];
+  }
   if (customer) filter.customer = customer;
   if (searchTerm) {
     filter.$or = [
@@ -337,8 +376,6 @@ export const getOrderById = async (id: string) => {
   return order;
 };
 
-// ─── Customer-scoped (storefront) ───────────────────────────────────────────
-
 export const getCustomerOrders = (userId: string, query: OrderListQuery) =>
   getAllOrders({ ...query, customer: userId });
 
@@ -352,9 +389,16 @@ export const getCustomerOrderById = async (userId: string, id: string) => {
   return order;
 };
 
-export const verifyCustomerPayment = async (userId: string, id: string) => {
-  await getCustomerOrderById(userId, id); // ownership check
-  return verifyPayment(id);
+export const verifyCustomerPayment = async (userId: string, idOrRef: string) => {
+  let order;
+  try {
+    order = await getCustomerOrderById(userId, idOrRef);
+  } catch {
+    const byNumber = await OrderModel.findOne({ orderNumber: idOrRef, customer: userId });
+    if (!byNumber) throw new AppError("Order not found", 404);
+    order = byNumber;
+  }
+  return verifyPayment(String(order._id));
 };
 
 export const getOrderStats = async () => {
@@ -371,15 +415,31 @@ export const getOrderStats = async () => {
         fulfilled: {
           $sum: {
             $cond: [
-              { $in: ["$fulfillmentStatus", ["fulfilled", "shipped", "delivered"]] },
+              {
+                $in: [
+                  "$fulfillmentStatus",
+                  ["fulfilled", "shipped", "delivered"],
+                ],
+              },
               1,
               0,
             ],
           },
         },
         unfulfilled: {
+          // Orders genuinely awaiting fulfillment — exclude cancelled ones,
+          // which need no action and shouldn't inflate the sidebar badge.
           $sum: {
-            $cond: [{ $eq: ["$fulfillmentStatus", "unfulfilled"] }, 1, 0],
+            $cond: [
+              {
+                $and: [
+                  { $eq: ["$fulfillmentStatus", "unfulfilled"] },
+                  { $ne: ["$status", "cancelled"] },
+                ],
+              },
+              1,
+              0,
+            ],
           },
         },
         pending: {
@@ -402,8 +462,6 @@ export const getOrderStats = async () => {
   };
 };
 
-// ─── Transitions ─────────────────────────────────────────────────────────────
-
 const pushTimeline = (
   order: any,
   type: string,
@@ -421,9 +479,62 @@ export const updateOrderStatus = async (
   const order = await OrderModel.findById(id);
   if (!order) throw new AppError("Order not found", 404);
 
-  // Cancelling restores any reserved stock once.
-  if (status === OrderStatus.Cancelled && order.status !== OrderStatus.Cancelled) {
+  if (
+    status === OrderStatus.Cancelled &&
+    order.status !== OrderStatus.Cancelled
+  ) {
+    // Goods already in transit can't be cancelled — that's a return, not a
+    // cancellation. Blocking this also prevents restoring phantom stock for
+    // items that have physically left the warehouse.
+    if (
+      order.fulfillmentStatus === FulfillmentStatus.Shipped ||
+      order.fulfillmentStatus === FulfillmentStatus.Delivered
+    ) {
+      throw new AppError(
+        "This order has already been shipped or delivered and cannot be cancelled. Process a return/refund instead.",
+        400,
+      );
+    }
+
+    // Restore inventory once (item never left the warehouse).
     await adjustStock(order.items, 1);
+
+    if (order.paymentStatus === PaymentStatus.Paid) {
+      // The customer paid — refund their money so we don't keep it. If the
+      // gateway refund fails, leave the payment as-is and flag for a manual
+      // refund rather than wrongly marking it Refunded.
+      if (order.paymentReference) {
+        try {
+          await refundTransaction({ reference: order.paymentReference });
+          order.paymentStatus = PaymentStatus.Refunded;
+          pushTimeline(order, "payment", "Refund issued on cancellation", by);
+        } catch (err) {
+          log.error(
+            `Cancellation refund failed for ${order.orderNumber}: ${err}`,
+          );
+          pushTimeline(
+            order,
+            "payment",
+            "Cancellation refund failed — manual refund required",
+            by,
+          );
+          createAdminNotification({
+            type: NotificationType.Payment,
+            title: "Manual refund required",
+            message: `${order.orderNumber} was cancelled but the refund failed`,
+            link: `/admin/orders/${order._id}`,
+          });
+        }
+      } else {
+        order.paymentStatus = PaymentStatus.Refunded;
+      }
+    } else if (order.paymentStatus === PaymentStatus.Pending) {
+      // Never paid — mark failed so the badge stays consistent (no lingering
+      // "Pending" on a cancelled order).
+      order.paymentStatus = PaymentStatus.Failed;
+    }
+
+    order.fulfillmentStatus = FulfillmentStatus.Unfulfilled;
   }
 
   order.status = status;
@@ -451,7 +562,8 @@ export const updatePaymentStatus = async (
   order.paymentStatus = paymentStatus;
   if (paymentStatus === PaymentStatus.Paid) {
     order.paidAt = new Date();
-    if (order.status === OrderStatus.Pending) order.status = OrderStatus.Processing;
+    if (order.status === OrderStatus.Pending)
+      order.status = OrderStatus.Processing;
   }
   pushTimeline(order, "payment", `Payment marked ${paymentStatus}`, by);
   await order.save();
@@ -469,9 +581,15 @@ export const updateFulfillmentStatus = async (
   order.fulfillmentStatus = fulfillmentStatus;
   if (fulfillmentStatus === FulfillmentStatus.Delivered) {
     order.shipment.deliveredAt = new Date();
-    if (order.status === OrderStatus.Processing) order.status = OrderStatus.Completed;
+    if (order.status === OrderStatus.Processing)
+      order.status = OrderStatus.Completed;
   }
-  pushTimeline(order, "fulfillment", `Fulfillment marked ${fulfillmentStatus}`, by);
+  pushTimeline(
+    order,
+    "fulfillment",
+    `Fulfillment marked ${fulfillmentStatus}`,
+    by,
+  );
   await order.save();
 
   if (fulfillmentStatus === FulfillmentStatus.Delivered) {
@@ -484,12 +602,13 @@ export const updateFulfillmentStatus = async (
   return order;
 };
 
-// Mark an order paid from a verified Paystack transaction.
 const applyPaidState = async (order: any) => {
   order.paymentStatus = PaymentStatus.Paid;
   order.paidAt = new Date();
-  if (order.status === OrderStatus.Pending) order.status = OrderStatus.Processing;
-  pushTimeline(order, "payment", "Payment confirmed via Paystack");
+  if (order.status === OrderStatus.Pending)
+    order.status = OrderStatus.Processing;
+  const provider = order.paymentProvider === "stripe" ? "Stripe" : "Paystack";
+  pushTimeline(order, "payment", `Payment confirmed via ${provider}`);
   await order.save();
 
   createAdminNotification({
@@ -504,41 +623,281 @@ const applyPaidState = async (order: any) => {
     `Payment received for ${order.orderNumber}`,
     OrderEmailTemplates.paymentReceipt,
   );
+
+  autoCreateShipment(order).catch((err) =>
+    log.error(`Auto-shipment failed for ${order.orderNumber}: ${err}`),
+  );
+};
+
+const autoCreateShipment = async (order: any) => {
+  if (!order.shipment?.requestToken || !order.shipment?.serviceCode || !order.shipment?.courierId) {
+    log.info(`${order.orderNumber}: no courier selected at checkout — skipping auto-ship`);
+    return;
+  }
+  if (order.shipment?.shipbubbleOrderId) return;
+
+  try {
+    const label = await shipping.createLabel({
+      requestToken: order.shipment.requestToken,
+      serviceCode: order.shipment.serviceCode,
+      courierId: order.shipment.courierId,
+    });
+
+    order.shipment.shipbubbleOrderId = label.shipbubbleOrderId;
+    order.shipment.trackingNumber = label.trackingNumber;
+    order.shipment.trackingUrl = label.trackingUrl;
+    order.shipment.labelUrl = label.labelUrl;
+    if (label.courier) order.shipment.courier = label.courier;
+    order.shipment.shippedAt = new Date();
+    order.fulfillmentStatus = FulfillmentStatus.Shipped;
+    pushTimeline(order, "fulfillment", "Shipment auto-booked after payment");
+    await order.save();
+
+    createAdminNotification({
+      type: NotificationType.Order,
+      title: "Shipment auto-created",
+      message: `${order.orderNumber} shipped via ${label.courier || "courier"}`,
+      link: `/admin/orders/${order._id}`,
+    });
+
+    await emailCustomer(
+      order,
+      `Your order ${order.orderNumber} has shipped`,
+      OrderEmailTemplates.orderShipped,
+    );
+
+    log.info(`Auto-shipped ${order.orderNumber} → ${label.trackingNumber || "no tracking"}`);
+  } catch (err) {
+    pushTimeline(order, "note", `Auto-shipment failed: ${(err as Error).message}`);
+    await order.save();
+    log.error(`Auto-shipment error for ${order.orderNumber}: ${err}`);
+  }
+};
+
+const applyFailedState = async (
+  order: any,
+  reason: "failed" | "abandoned" = "failed",
+) => {
+  const abandoned = reason === "abandoned";
+  order.paymentStatus = PaymentStatus.Failed;
+  order.status = OrderStatus.Cancelled;
+  order.fulfillmentStatus = FulfillmentStatus.Unfulfilled;
+  pushTimeline(
+    order,
+    "payment",
+    abandoned
+      ? "Payment abandoned — order auto-cancelled, stock restored"
+      : "Payment failed — order cancelled, stock restored",
+  );
+  await adjustStock(order.items, 1);
+  await order.save();
+
+  createAdminNotification({
+    type: NotificationType.Payment,
+    title: abandoned ? "Payment abandoned" : "Payment failed",
+    message: `${order.orderNumber} — cancelled, stock restored`,
+    link: `/admin/orders/${order._id}`,
+  });
+
+  await emailCustomer(
+    order,
+    abandoned
+      ? `Your order ${order.orderNumber} was cancelled`
+      : `Payment failed for ${order.orderNumber}`,
+    OrderEmailTemplates.orderCancelled,
+  );
 };
 
 export const verifyPayment = async (id: string) => {
   const order = await OrderModel.findById(id);
   if (!order) throw new AppError("Order not found", 404);
+  if (order.paymentStatus === PaymentStatus.Paid) return order;
   if (!order.paymentReference) {
     throw new AppError("Order has no payment reference to verify", 400);
   }
-  if (order.paymentStatus === PaymentStatus.Paid) return order;
 
-  const result = await verifyTransaction(order.paymentReference);
-  if (result.paid) {
-    await applyPaidState(order);
+  if (order.paymentProvider === "stripe") {
+    const result = await stripeService.verifyPaymentByReference(order.paymentReference);
+    if (result.paid) {
+      await applyPaidState(order);
+    }
   } else {
-    order.paymentStatus = PaymentStatus.Failed;
-    pushTimeline(order, "payment", `Payment ${result.status}`);
-    await order.save();
+    const result = await verifyTransaction(order.paymentReference);
+    if (result.paid) {
+      await applyPaidState(order);
+    } else {
+      await applyFailedState(order);
+    }
   }
   return order;
 };
 
-// Process a verified Paystack webhook event.
 export const handlePaystackWebhook = async (event: any) => {
-  if (event?.event !== "charge.success") return;
   const reference = event?.data?.reference;
   if (!reference) return;
 
   const order = await OrderModel.findOne({ paymentReference: reference });
-  if (!order || order.paymentStatus === PaymentStatus.Paid) return;
-  await applyPaidState(order);
+  if (!order) return;
+
+  if (event?.event === "charge.success") {
+    if (order.paymentStatus !== PaymentStatus.Paid) {
+      await applyPaidState(order);
+    }
+  } else if (event?.event === "charge.failed") {
+    if (
+      order.paymentStatus !== PaymentStatus.Paid &&
+      order.paymentStatus !== PaymentStatus.Failed
+    ) {
+      await applyFailedState(order);
+    }
+  }
+};
+
+export const handleStripeWebhook = async (event: any) => {
+  if (event.type === "checkout.session.completed") {
+    const session = event.data.object;
+    const reference = session.metadata?.reference;
+    if (!reference) return;
+
+    const order = await OrderModel.findOne({ paymentReference: reference });
+    if (!order) return;
+
+    if (session.payment_status === "paid" && order.paymentStatus !== PaymentStatus.Paid) {
+      await applyPaidState(order);
+    }
+  } else if (event.type === "checkout.session.expired") {
+    const session = event.data.object;
+    const reference = session.metadata?.reference;
+    if (!reference) return;
+
+    const order = await OrderModel.findOne({ paymentReference: reference });
+    if (!order || order.paymentStatus === PaymentStatus.Paid) return;
+
+    await applyFailedState(order, "abandoned");
+  }
+};
+
+// Sweep orders stuck in `pending` payment past the abandonment window. For each,
+// re-verify with Paystack one last time (in case a callback/webhook was missed),
+// otherwise auto-cancel and restore stock so inventory isn't held indefinitely.
+const ABANDON_AFTER_MINUTES = 30;
+
+export const sweepAbandonedOrders = async () => {
+  const cutoff = new Date(Date.now() - ABANDON_AFTER_MINUTES * 60 * 1000);
+  const stale = await OrderModel.find({
+    paymentStatus: PaymentStatus.Pending,
+    status: { $ne: OrderStatus.Cancelled },
+    createdAt: { $lt: cutoff },
+  });
+
+  let reconciled = 0;
+  let cancelled = 0;
+
+  for (const order of stale) {
+    try {
+      if (order.paymentReference) {
+        const result = await verifyTransaction(order.paymentReference);
+        if (result.paid) {
+          await applyPaidState(order);
+          reconciled += 1;
+          continue;
+        }
+      }
+      await applyFailedState(order, "abandoned");
+      cancelled += 1;
+    } catch (err) {
+      log.error(`Failed to sweep abandoned order ${order.orderNumber}: ${err}`);
+    }
+  }
+
+  if (stale.length) {
+    log.info(
+      `Abandoned-order sweep: ${stale.length} checked, ${reconciled} reconciled paid, ${cancelled} cancelled`,
+    );
+  }
+  return { checked: stale.length, reconciled, cancelled };
+};
+
+// Admin-triggered, on-demand reconciliation of every pending-payment order.
+// Unlike the scheduled sweep, this has no age cutoff — instead it trusts
+// Paystack's reported status so an order the customer is still actively paying
+// (status "ongoing"/"pending") is left untouched, while ones Paystack reports as
+// failed/abandoned are cancelled and their stock restored immediately.
+export const reconcilePendingPayments = async () => {
+  const pending = await OrderModel.find({
+    paymentStatus: PaymentStatus.Pending,
+    status: { $ne: OrderStatus.Cancelled },
+  });
+
+  let paid = 0;
+  let cancelled = 0;
+  let untouched = 0;
+
+  for (const order of pending) {
+    try {
+      if (!order.paymentReference) {
+        await applyFailedState(order, "abandoned");
+        cancelled += 1;
+        continue;
+      }
+      const result = await verifyTransaction(order.paymentReference);
+      if (result.paid) {
+        await applyPaidState(order);
+        paid += 1;
+      } else if (["failed", "abandoned", "reversed"].includes(result.status)) {
+        await applyFailedState(order, "abandoned");
+        cancelled += 1;
+      } else {
+        untouched += 1;
+      }
+    } catch (err) {
+      log.error(`Failed to reconcile order ${order.orderNumber}: ${err}`);
+      untouched += 1;
+    }
+  }
+
+  // Normalize orders that were already cancelled but left with a lingering
+  // "pending" payment badge (e.g. cancelled manually before this fix). Stock
+  // was already restored at cancellation, so only the badge is corrected here.
+  const normalized = await OrderModel.updateMany(
+    {
+      status: OrderStatus.Cancelled,
+      paymentStatus: PaymentStatus.Pending,
+    },
+    { $set: { paymentStatus: PaymentStatus.Failed } },
+  );
+  const fixed = normalized.modifiedCount ?? 0;
+  cancelled += fixed;
+
+  // A cancelled order that is still marked shipped/delivered is contradictory
+  // (e.g. cancelled after dispatch before the cancel-guard existed). Treat the
+  // goods as coming back: mark fulfillment "returned", which keeps the order
+  // consistent with the stock that was restored at cancellation.
+  const returned = await OrderModel.updateMany(
+    {
+      status: OrderStatus.Cancelled,
+      fulfillmentStatus: {
+        $in: [FulfillmentStatus.Shipped, FulfillmentStatus.Delivered],
+      },
+    },
+    { $set: { fulfillmentStatus: FulfillmentStatus.Returned } },
+  );
+  const returnedFixed = returned.modifiedCount ?? 0;
+
+  return {
+    checked: pending.length + fixed + returnedFixed,
+    paid,
+    cancelled: cancelled + returnedFixed,
+    untouched,
+  };
 };
 
 export const refundOrder = async (id: string, amount?: number, by?: string) => {
   const order = await OrderModel.findById(id);
   if (!order) throw new AppError("Order not found", 404);
+  if (order.paymentStatus !== PaymentStatus.Paid) {
+    throw new AppError("Only a paid order can be refunded", 400);
+  }
   if (!order.paymentReference) {
     throw new AppError("Order has no payment to refund", 400);
   }
@@ -546,7 +905,12 @@ export const refundOrder = async (id: string, amount?: number, by?: string) => {
   await refundTransaction({ reference: order.paymentReference, amount });
 
   order.paymentStatus = PaymentStatus.Refunded;
-  await adjustStock(order.items, 1);
+  // Only restore stock when the order is still live. A cancelled order already
+  // had its stock restored at cancellation, so restoring again would
+  // double-count inventory.
+  if (order.status !== OrderStatus.Cancelled) {
+    await adjustStock(order.items, 1);
+  }
   pushTimeline(
     order,
     "payment",
@@ -568,7 +932,50 @@ export const cancelOrder = async (id: string, by?: string) => {
   return updateOrderStatus(id, OrderStatus.Cancelled, by);
 };
 
-// ─── Fulfillment (Shipbubble) ───────────────────────────────────────────────
+export const customerCancelOrder = async (userId: string, orderId: string, reason?: string) => {
+  const order = await OrderModel.findById(orderId);
+  if (!order) throw new AppError("Order not found", 404);
+
+  const ownerId = typeof (order.customer as any)?._id !== "undefined"
+    ? String((order.customer as any)._id)
+    : String(order.customer);
+  if (ownerId !== userId) throw new AppError("Order not found", 404);
+
+  if (order.fulfillmentStatus === FulfillmentStatus.Shipped ||
+      order.fulfillmentStatus === FulfillmentStatus.Delivered) {
+    throw new AppError("Cannot cancel a shipped or delivered order. Open a dispute instead.", 400);
+  }
+
+  if (order.status === OrderStatus.Cancelled) {
+    throw new AppError("Order is already cancelled", 400);
+  }
+
+  if (order.shipment?.shipbubbleOrderId) {
+    try {
+      await shipping.cancelShipment(order.shipment.shipbubbleOrderId);
+      pushTimeline(order, "fulfillment", "Shipment cancelled");
+    } catch (err) {
+      log.error(`Failed to cancel Shipbubble shipment for ${order.orderNumber}: ${err}`);
+    }
+  }
+
+  order.status = OrderStatus.Cancelled;
+  order.fulfillmentStatus = FulfillmentStatus.Unfulfilled;
+  pushTimeline(order, "status", reason ? `Cancelled by customer: ${reason}` : "Cancelled by customer");
+  await adjustStock(order.items, 1);
+  await order.save();
+
+  createAdminNotification({
+    type: NotificationType.Order,
+    title: "Order cancelled by customer",
+    message: `${order.orderNumber}${reason ? ` — ${reason}` : ""}`,
+    link: `/admin/orders/${order._id}`,
+  });
+
+  await emailCustomer(order, `Order ${order.orderNumber} cancelled`, OrderEmailTemplates.orderCancelled);
+
+  return order;
+};
 
 export const shipOrder = async (
   id: string,
@@ -617,9 +1024,10 @@ export const trackOrder = async (id: string) => {
     throw new AppError("Order has no shipment to track", 400);
   }
 
-  const tracking = await shipping.trackShipment(order.shipment.shipbubbleOrderId);
+  const tracking = await shipping.trackShipment(
+    order.shipment.shipbubbleOrderId,
+  );
 
-  // Best-effort status mapping.
   const status = String(tracking?.status || "").toLowerCase();
   if (
     status.includes("deliver") &&
@@ -627,7 +1035,8 @@ export const trackOrder = async (id: string) => {
   ) {
     order.fulfillmentStatus = FulfillmentStatus.Delivered;
     order.shipment.deliveredAt = new Date();
-    if (order.status === OrderStatus.Processing) order.status = OrderStatus.Completed;
+    if (order.status === OrderStatus.Processing)
+      order.status = OrderStatus.Completed;
     await order.save();
     await emailCustomer(
       order,
@@ -637,4 +1046,51 @@ export const trackOrder = async (id: string) => {
   }
 
   return { order, tracking };
+};
+
+export const pollShippedOrderTracking = async () => {
+  const shipped = await OrderModel.find({
+    fulfillmentStatus: FulfillmentStatus.Shipped,
+    "shipment.shipbubbleOrderId": { $exists: true, $ne: "" },
+  });
+
+  if (shipped.length === 0) return { checked: 0, updated: 0 };
+
+  let updated = 0;
+  for (const order of shipped) {
+    try {
+      const tracking = await shipping.trackShipment(order.shipment.shipbubbleOrderId!);
+      const status = String(tracking?.status || "").toLowerCase();
+
+      if (status.includes("deliver") && order.fulfillmentStatus !== FulfillmentStatus.Delivered) {
+        order.fulfillmentStatus = FulfillmentStatus.Delivered;
+        order.shipment.deliveredAt = new Date();
+        if (order.status === OrderStatus.Processing) order.status = OrderStatus.Completed;
+        pushTimeline(order, "fulfillment", "Delivered — confirmed by carrier tracking");
+        await order.save();
+
+        await emailCustomer(order, `Order ${order.orderNumber} delivered`, OrderEmailTemplates.orderDelivered);
+
+        createAdminNotification({
+          type: NotificationType.Order,
+          title: "Order delivered",
+          message: `${order.orderNumber} confirmed delivered`,
+          link: `/admin/orders/${order._id}`,
+        });
+
+        updated++;
+      } else if (tracking?.tracking_number && !order.shipment.trackingNumber) {
+        order.shipment.trackingNumber = tracking.tracking_number;
+        if (tracking.tracking_url) order.shipment.trackingUrl = tracking.tracking_url;
+        await order.save();
+      }
+    } catch (err) {
+      log.error(`Tracking poll failed for ${order.orderNumber}: ${err}`);
+    }
+  }
+
+  if (shipped.length > 0) {
+    log.info(`Tracking poll: ${shipped.length} checked, ${updated} delivered`);
+  }
+  return { checked: shipped.length, updated };
 };

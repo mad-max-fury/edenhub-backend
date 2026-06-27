@@ -70,6 +70,27 @@ get(
 );
 
 get(
+  "/low-stock",
+  { resource: "Product", action: "Read", group: GROUP, name: "get_product_low_stock" },
+  auth, hasPermission,
+  productCtrl.getLowStockHandler,
+);
+
+patch(
+  "/bulk/status",
+  { resource: "Product", action: "Update", group: GROUP, name: "patch_product_bulk_status" },
+  auth, hasPermission,
+  productCtrl.bulkUpdateStatusHandler,
+);
+
+patch(
+  "/bulk/discount",
+  { resource: "Product", action: "Update", group: GROUP, name: "patch_product_bulk_discount" },
+  auth, hasPermission,
+  productCtrl.bulkUpdateDiscountHandler,
+);
+
+get(
   "/:id",
   {
     resource: "Product",

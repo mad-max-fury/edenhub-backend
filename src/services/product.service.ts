@@ -134,6 +134,42 @@ export const deleteProduct = async (id: string) => {
   return product;
 };
 
+export const bulkUpdateStatus = async (ids: string[], status: string) => {
+  const result = await ProductModel.updateMany(
+    { _id: { $in: ids } },
+    { $set: { status } },
+  );
+  return { modified: result.modifiedCount };
+};
+
+export const bulkUpdateDiscount = async (ids: string[], percentage: number) => {
+  const products = await ProductModel.find({ _id: { $in: ids } });
+  let updated = 0;
+  for (const p of products) {
+    const discountPrice = Math.round(p.basePrice * (1 - percentage / 100));
+    p.discount = { percentage, price: discountPrice, startDate: new Date() } as any;
+    await p.save();
+    updated++;
+  }
+  return { updated };
+};
+
+export const publishScheduledProducts = async () => {
+  const now = new Date();
+  const result = await ProductModel.updateMany(
+    { status: "drafted", scheduledPublishAt: { $lte: now } },
+    { $set: { status: "active" }, $unset: { scheduledPublishAt: 1 } },
+  );
+  return { published: result.modifiedCount };
+};
+
+export const getLowStockProducts = async () => {
+  return ProductModel.find({
+    status: "active",
+    $expr: { $lte: ["$quantity", "$lowStockThreshold"] },
+  }).select("name quantity lowStockThreshold coverImage slug").lean();
+};
+
 // ─── Public catalog (storefront) ────────────────────────────────────────────
 
 export interface CatalogQuery extends IPaginationQuery {
@@ -142,13 +178,61 @@ export interface CatalogQuery extends IPaginationQuery {
   minPrice?: number;
   maxPrice?: number;
   sort?: string; // price_asc | price_desc | newest | popular
+  audience?: string; // men | women | unisex
+  tag?: string; // facet filter against the product tags array
 }
 
 export const getCatalogProducts = async (query: CatalogQuery) => {
-  const { pageNumber, pageSize, searchTerm, category, brand, minPrice, maxPrice, sort } =
-    query;
+  const {
+    pageNumber,
+    pageSize,
+    searchTerm,
+    category,
+    brand,
+    minPrice,
+    maxPrice,
+    sort,
+    audience,
+    tag,
+  } = query;
 
   const filter: FilterQuery<Product> = { status: "active" };
+
+  if (audience) {
+    const aud = audience.toLowerCase();
+    filter.$expr = {
+      $or: [
+        { $eq: [{ $toLower: { $ifNull: ["$audience", ""] } }, aud] },
+        {
+          $in: [
+            aud,
+            {
+              $map: {
+                input: { $objectToArray: { $ifNull: ["$attributes", {}] } },
+                as: "a",
+                in: { $toLower: { $toString: "$$a.v" } },
+              },
+            },
+          ],
+        },
+      ],
+    };
+  }
+
+  if (tag) {
+    const tagList = tag
+      .split(",")
+      .map((t) => t.trim())
+      .filter(Boolean);
+    if (tagList.length === 1) {
+      filter.tags = { $regex: tagList[0], $options: "i" };
+    } else if (tagList.length > 1) {
+      filter.$and = [
+        ...(Array.isArray(filter.$and) ? filter.$and : []),
+        ...tagList.map((t) => ({ tags: { $regex: t, $options: "i" } })),
+      ];
+    }
+  }
 
   if (category) {
     let categoryId = category;
@@ -200,14 +284,35 @@ export const getCatalogProducts = async (query: CatalogQuery) => {
   return { products, totalCount };
 };
 
-export const getCatalogProductById = async (id: string) => {
-  if (!isValidObjectId(id)) throw new AppError("Product not found", 404);
-  const product = await ProductModel.findOne({
-    _id: id,
-    status: "active",
-  }).populate("category", "name slug attributes");
+export const getCatalogProductById = async (idOrSlug: string) => {
+  const filter: Record<string, unknown> = { status: "active" };
+  if (isValidObjectId(idOrSlug)) filter._id = idOrSlug;
+  else filter.slug = idOrSlug;
+
+  const product = await ProductModel.findOneAndUpdate(
+    filter,
+    { $inc: { viewCount: 1 } },
+    { new: true },
+  )
+    .populate("category", "name slug attributes")
+    .populate("relatedProducts", "name slug coverImage images basePrice discount averageRating totalReviews quantity variants status audience");
   if (!product) throw new AppError("Product not found", 404);
-  return product;
+
+  let variationSiblings: any[] = [];
+  if (product.variationGroup) {
+    variationSiblings = await ProductModel.find({
+      variationGroup: product.variationGroup,
+      status: "active",
+      _id: { $ne: product._id },
+    })
+      .select("name slug coverImage images basePrice discount quantity variationLabel variationValue")
+      .sort("name")
+      .lean();
+  }
+
+  const result = product.toObject();
+  (result as any).variationSiblings = variationSiblings;
+  return result;
 };
 
 export const getCatalogBrands = async () => {
@@ -216,6 +321,37 @@ export const getCatalogBrands = async () => {
     brand: { $nin: [null, ""] },
   });
   return brands.sort();
+};
+
+// Best sellers — ordered by sales, then rating, then newest. Always returns up
+// to `limit` products even when there are no sales yet (graceful fallback).
+export const getBestSellers = async (
+  opts: {
+    limit?: number;
+    audience?: string;
+    category?: string;
+  } = {},
+) => {
+  const limit = opts.limit ?? 8;
+  const filter: FilterQuery<Product> = { status: "active" };
+
+  if (opts.audience) filter.audience = opts.audience.toLowerCase();
+
+  if (opts.category) {
+    let categoryId = opts.category;
+    if (!isValidObjectId(opts.category)) {
+      const cat = await CategoryModel.findOne({
+        slug: opts.category.toLowerCase(),
+      }).select("_id");
+      categoryId = cat ? String(cat._id) : "000000000000000000000000";
+    }
+    filter.category = categoryId;
+  }
+
+  return ProductModel.find(filter)
+    .populate("category", "name slug")
+    .sort("-totalSales -averageRating -createdAt")
+    .limit(limit);
 };
 
 // ─── Stats ─────────────────────────────────────────────────────────────────

@@ -31,6 +31,21 @@ export const updateCartItemHandler = catchAsync(
   },
 );
 
+export const setEngravingHandler = catchAsync(
+  async (req: Request, res: Response) => {
+    const cart = await cartService.setEngraving(
+      req.user!.id,
+      req.params.itemId,
+      req.body,
+    );
+    res.status(200).json({
+      status: "success",
+      message: "Engraving updated",
+      data: cart,
+    });
+  },
+);
+
 export const removeCartItemHandler = catchAsync(
   async (req: Request, res: Response) => {
     const cart = await cartService.removeItem(req.user!.id, req.params.itemId);

@@ -3,6 +3,31 @@ import CartModel from "../models/cart.model";
 import ProductModel from "../models/product.model";
 import AppError from "../errors/appError";
 
+interface EngravingInput {
+  font?: string;
+  lines?: string[];
+}
+
+// The product's engraving configuration, with safe fallbacks.
+const engravingConfig = (product: any) => {
+  const e = product?.engraving;
+  return {
+    available: !!e?.available,
+    fee: e?.fee ?? 0,
+    maxCharacters: e?.maxCharacters ?? 20,
+    maxLines: e?.maxLines ?? 1,
+    fonts: e?.fonts ?? [],
+  };
+};
+
+// Normalise engraving input → stored shape (drops empty lines, applies the
+// product's per-unit fee).
+const normaliseEngraving = (e: EngravingInput | undefined, fee: number) => {
+  const lines = (e?.lines ?? []).map((l) => (l ?? "").trim()).filter(Boolean);
+  if (lines.length === 0) return undefined;
+  return { font: e?.font, lines, fee };
+};
+
 const effectivePrice = (source: {
   basePrice: number;
   discount?: { price?: number; startDate?: Date; endDate?: Date };
@@ -51,7 +76,8 @@ const enrich = async (userId: string) => {
         }
       }
 
-      const lineTotal = unitPrice * it.quantity;
+      const engravingFee = it.engraving?.fee ?? 0;
+      const lineTotal = (unitPrice + engravingFee) * it.quantity;
       subtotal += lineTotal;
 
       return {
@@ -65,6 +91,14 @@ const enrich = async (userId: string) => {
         quantity: it.quantity,
         lineTotal,
         stock,
+        engraving: it.engraving
+          ? {
+              font: it.engraving.font,
+              lines: it.engraving.lines ?? [],
+              fee: it.engraving.fee ?? 0,
+            }
+          : undefined,
+        engravingConfig: engravingConfig(product),
       };
     })
     .filter(Boolean);
@@ -80,7 +114,12 @@ export const getCart = (userId: string) => enrich(userId);
 
 export const addItem = async (
   userId: string,
-  data: { product: string; variantId?: string; quantity?: number },
+  data: {
+    product: string;
+    variantId?: string;
+    quantity?: number;
+    engraving?: EngravingInput;
+  },
 ) => {
   const product = await ProductModel.findOne({
     _id: data.product,
@@ -90,12 +129,21 @@ export const addItem = async (
 
   const cart = await getOrCreateCart(userId);
   const qty = data.quantity && data.quantity > 0 ? data.quantity : 1;
+  const cfg = engravingConfig(product);
+  // Only engrave when the product actually offers it; otherwise drop it.
+  const engraving = cfg.available
+    ? normaliseEngraving(data.engraving, cfg.fee)
+    : undefined;
 
-  const existing = cart.items.find(
-    (it) =>
-      String(it.product) === data.product &&
-      (it.variantId || "") === (data.variantId || ""),
-  );
+  // Engraved items are always their own line (never merged with a plain one).
+  const existing = engraving
+    ? undefined
+    : cart.items.find(
+        (it) =>
+          String(it.product) === data.product &&
+          (it.variantId || "") === (data.variantId || "") &&
+          !it.engraving,
+      );
 
   if (existing) {
     existing.quantity += qty;
@@ -104,9 +152,30 @@ export const addItem = async (
       product: new Types.ObjectId(data.product) as any,
       variantId: data.variantId,
       quantity: qty,
+      engraving,
     } as any);
   }
 
+  await cart.save();
+  return enrich(userId);
+};
+
+export const setEngraving = async (
+  userId: string,
+  itemId: string,
+  engraving: EngravingInput,
+) => {
+  const cart = await getOrCreateCart(userId);
+  const item = (cart.items as any).id(itemId);
+  if (!item) throw new AppError("Cart item not found", 404);
+
+  const product = await ProductModel.findById(item.product);
+  const cfg = engravingConfig(product);
+  const normalised = normaliseEngraving(engraving, cfg.fee);
+  if (normalised && !cfg.available) {
+    throw new AppError("Engraving is not available for this product", 400);
+  }
+  item.engraving = normalised;
   await cart.save();
   return enrich(userId);
 };

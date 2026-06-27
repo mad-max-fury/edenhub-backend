@@ -43,6 +43,8 @@ type Config = {
   storefrontUrl: string;
   paystackSecretKey: string;
   paystackBaseUrl: string;
+  stripeSecretKey: string;
+  stripeWebhookSecret: string;
   shipbubbleApiKey: string;
   shipbubbleBaseUrl: string;
   shipOrigin: {
@@ -123,9 +125,11 @@ const config: Config = {
   awsRegion: process.env.awsRegion || "",
   awsSecretKey: process.env.awsSecretKey || "",
 
-  storefrontUrl: process.env.STOREFRONT_URL || "http://localhost:3000",
+  storefrontUrl: process.env.STOREFRONT_URL || "http://localhost:3001",
   paystackSecretKey: process.env.PAYSTACK_SECRET_KEY || "",
   paystackBaseUrl: process.env.PAYSTACK_BASE_URL || "https://api.paystack.co",
+  stripeSecretKey: process.env.STRIPE_SECRET_KEY || "",
+  stripeWebhookSecret: process.env.STRIPE_WEBHOOK_SECRET || "",
   shipbubbleApiKey: process.env.SHIPBUBBLE_API_KEY || "",
   shipbubbleBaseUrl:
     process.env.SHIPBUBBLE_BASE_URL || "https://api.shipbubble.com/v1",
