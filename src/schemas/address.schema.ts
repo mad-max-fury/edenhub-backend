@@ -1,4 +1,4 @@
-import { boolean, object, string, TypeOf } from "zod";
+import { boolean, number, object, string, TypeOf, z } from "zod";
 
 export const createAddressSchema = object({
   body: object({
@@ -14,7 +14,7 @@ export const createAddressSchema = object({
     country: string().trim().default("Nigeria"),
     postalCode: string().trim().optional(),
     email: string().email().optional(),
-    addressCode: string().trim().optional(),
+    addressCode: z.union([string(), number()]).transform(String).optional(),
     isDefault: boolean().optional(),
   }),
 });
@@ -33,7 +33,7 @@ export const updateAddressSchema = object({
     state: string().trim().min(1).optional(),
     country: string().trim().optional(),
     postalCode: string().trim().optional(),
-    addressCode: string().trim().optional(),
+    addressCode: z.union([string(), number()]).transform(String).optional(),
     isDefault: boolean().optional(),
   }),
 });

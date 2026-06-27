@@ -24,7 +24,7 @@ const addressSchema = object({
   state: string({ required_error: "State/Region is required" }).trim().min(1),
   country: string().trim().default("Nigeria"),
   postalCode: string().trim().optional(),
-  addressCode: string().trim().optional(),
+  addressCode: z.union([string(), number()]).transform(String).optional(),
 }).transform((data) => {
   if (!data.firstName && !data.lastName && data.fullName) {
     const parts = data.fullName.trim().split(/\s+/);
