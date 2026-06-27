@@ -98,11 +98,12 @@ export class MailerService {
   }
 
   private compileMjml(mjmlString: string): string {
-    const { html, errors } = mjml2html(mjmlString, {
+    const result: any = mjml2html(mjmlString, {
       validationLevel: "soft",
     });
+    const { html, errors } = result;
 
-    if (errors.length > 0) {
+    if (errors && errors.length > 0) {
       log.warn(
         "MJML Warnings:",
         errors.map((e: any) => e.message),
