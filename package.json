@@ -8,6 +8,8 @@
     "dev": "ts-node-dev --respawn --transpile-only src/index.ts",
     "build": "tsc --build",
     "email:test": "ts-node --transpile-only scripts/sendTestEmails.ts",
+    "seed:admin": "ts-node --transpile-only src/scripts/seedAdmin.ts",
+    "seed:images": "ts-node --transpile-only src/scripts/uploadProductImages.ts",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "Ndubuisi Obinna Christopher",

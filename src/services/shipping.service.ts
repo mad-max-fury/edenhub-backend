@@ -119,14 +119,8 @@ const AFRICAN_COUNTRIES = [
 
 const isSandbox = () => (apiKey() || "").startsWith("sb_sandbox");
 
-const resolveServiceCodes = (country?: string): string | undefined => {
-  if (isSandbox()) return undefined;
-  if (!country) return DOMESTIC_COURIERS.join(",");
-  const c = country.trim().toLowerCase();
-  if (c === "nigeria" || AFRICAN_COUNTRIES.includes(c)) {
-    return DOMESTIC_COURIERS.join(",");
-  }
-  return INTERNATIONAL_COURIERS.join(",");
+const resolveServiceCodes = (_country?: string): string | undefined => {
+  return undefined;
 };
 
 export const fetchRates = async (params: {

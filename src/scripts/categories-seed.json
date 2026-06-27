@@ -1,0 +1,922 @@
+[
+  {
+    "name": "Watches",
+    "slug": "watches",
+    "attributes": [
+      {
+        "name": "Case Material",
+        "inputType": "select",
+        "isRequired": true,
+        "order": 1,
+        "options": [
+          {
+            "label": "Wooden",
+            "value": "wooden"
+          },
+          {
+            "label": "Bamboo",
+            "value": "bamboo"
+          },
+          {
+            "label": "Wood + Metal",
+            "value": "wood-metal"
+          },
+          {
+            "label": "Zinc Alloy",
+            "value": "zinc-alloy"
+          },
+          {
+            "label": "Stainless Steel",
+            "value": "stainless-steel"
+          }
+        ]
+      },
+      {
+        "name": "Band Material",
+        "inputType": "select",
+        "isRequired": true,
+        "order": 2,
+        "options": [
+          {
+            "label": "Wooden",
+            "value": "wooden"
+          },
+          {
+            "label": "Bamboo",
+            "value": "bamboo"
+          },
+          {
+            "label": "Leather",
+            "value": "leather"
+          },
+          {
+            "label": "Silicone",
+            "value": "silicone"
+          },
+          {
+            "label": "Stainless Steel",
+            "value": "stainless-steel"
+          }
+        ]
+      },
+      {
+        "name": "Movement",
+        "inputType": "select",
+        "isRequired": true,
+        "order": 3,
+        "options": [
+          {
+            "label": "Quartz",
+            "value": "quartz"
+          },
+          {
+            "label": "Mechanical Hand Wind",
+            "value": "mechanical-hand-wind"
+          },
+          {
+            "label": "Automatic",
+            "value": "automatic"
+          },
+          {
+            "label": "Digital",
+            "value": "digital"
+          },
+          {
+            "label": "Smart",
+            "value": "smart"
+          }
+        ]
+      },
+      {
+        "name": "Dial Diameter",
+        "inputType": "text",
+        "isRequired": false,
+        "order": 4,
+        "options": []
+      },
+      {
+        "name": "Case Thickness",
+        "inputType": "text",
+        "isRequired": false,
+        "order": 5,
+        "options": []
+      },
+      {
+        "name": "Band Width",
+        "inputType": "text",
+        "isRequired": false,
+        "order": 6,
+        "options": []
+      },
+      {
+        "name": "Band Length",
+        "inputType": "text",
+        "isRequired": false,
+        "order": 7,
+        "options": []
+      },
+      {
+        "name": "Case Shape",
+        "inputType": "select",
+        "isRequired": false,
+        "order": 8,
+        "options": [
+          {
+            "label": "Round",
+            "value": "round"
+          },
+          {
+            "label": "Square",
+            "value": "square"
+          },
+          {
+            "label": "Octagon",
+            "value": "octagon"
+          },
+          {
+            "label": "Rectangle",
+            "value": "rectangle"
+          },
+          {
+            "label": "Tonneau",
+            "value": "tonneau"
+          }
+        ]
+      },
+      {
+        "name": "Dial Window",
+        "inputType": "select",
+        "isRequired": false,
+        "order": 9,
+        "options": [
+          {
+            "label": "Hardlex",
+            "value": "hardlex"
+          },
+          {
+            "label": "Sapphire",
+            "value": "sapphire"
+          },
+          {
+            "label": "Mineral Glass",
+            "value": "mineral-glass"
+          },
+          {
+            "label": "Acrylic",
+            "value": "acrylic"
+          }
+        ]
+      },
+      {
+        "name": "Clasp Type",
+        "inputType": "select",
+        "isRequired": false,
+        "order": 10,
+        "options": [
+          {
+            "label": "Folding with Safety",
+            "value": "folding-with-safety"
+          },
+          {
+            "label": "Buckle",
+            "value": "buckle"
+          },
+          {
+            "label": "Push Button Hidden",
+            "value": "push-button-hidden"
+          },
+          {
+            "label": "Bracelet Clasp",
+            "value": "bracelet-clasp"
+          },
+          {
+            "label": "Magnetic",
+            "value": "magnetic"
+          }
+        ]
+      },
+      {
+        "name": "Water Resistance",
+        "inputType": "select",
+        "isRequired": false,
+        "order": 11,
+        "options": [
+          {
+            "label": "None",
+            "value": "none"
+          },
+          {
+            "label": "3 Bar",
+            "value": "3-bar"
+          },
+          {
+            "label": "5 Bar",
+            "value": "5-bar"
+          },
+          {
+            "label": "IP68",
+            "value": "ip68"
+          },
+          {
+            "label": "Splash Proof",
+            "value": "splash-proof"
+          }
+        ]
+      },
+      {
+        "name": "Certification",
+        "inputType": "text",
+        "isRequired": false,
+        "order": 12,
+        "options": []
+      }
+    ],
+    "subcategories": [
+      {
+        "name": "Chronograph",
+        "slug": "chronograph",
+        "attributes": [
+          {
+            "name": "Chronograph Features",
+            "inputType": "checkbox",
+            "isRequired": false,
+            "order": 1,
+            "options": [
+              {
+                "label": "Stopwatch",
+                "value": "stopwatch"
+              },
+              {
+                "label": "Auto Date",
+                "value": "auto-date"
+              },
+              {
+                "label": "Luminous Hands",
+                "value": "luminous-hands"
+              },
+              {
+                "label": "Sub-Dials",
+                "value": "sub-dials"
+              },
+              {
+                "label": "Tachymeter",
+                "value": "tachymeter"
+              }
+            ]
+          }
+        ],
+        "subcategories": []
+      },
+      {
+        "name": "Mechanical",
+        "slug": "mechanical",
+        "attributes": [
+          {
+            "name": "Mechanical Type",
+            "inputType": "select",
+            "isRequired": true,
+            "order": 1,
+            "options": [
+              {
+                "label": "Hand Wind",
+                "value": "hand-wind"
+              },
+              {
+                "label": "Automatic",
+                "value": "automatic"
+              },
+              {
+                "label": "Skeleton",
+                "value": "skeleton"
+              }
+            ]
+          },
+          {
+            "name": "Power Reserve",
+            "inputType": "text",
+            "isRequired": false,
+            "order": 2,
+            "options": []
+          }
+        ],
+        "subcategories": []
+      },
+      {
+        "name": "Digital",
+        "slug": "digital",
+        "attributes": [
+          {
+            "name": "Display Type",
+            "inputType": "select",
+            "isRequired": true,
+            "order": 1,
+            "options": [
+              {
+                "label": "LED",
+                "value": "led"
+              },
+              {
+                "label": "LCD",
+                "value": "lcd"
+              },
+              {
+                "label": "Dual Display",
+                "value": "dual-display"
+              }
+            ]
+          },
+          {
+            "name": "Digital Features",
+            "inputType": "checkbox",
+            "isRequired": false,
+            "order": 2,
+            "options": [
+              {
+                "label": "Luminous",
+                "value": "luminous"
+              },
+              {
+                "label": "Auto Date",
+                "value": "auto-date"
+              },
+              {
+                "label": "Alarm",
+                "value": "alarm"
+              },
+              {
+                "label": "Time/Date Display",
+                "value": "time-date-display"
+              },
+              {
+                "label": "Night Vision",
+                "value": "night-vision"
+              }
+            ]
+          }
+        ],
+        "subcategories": []
+      },
+      {
+        "name": "Minimalist",
+        "slug": "minimalist",
+        "attributes": [
+          {
+            "name": "Weight",
+            "inputType": "text",
+            "isRequired": false,
+            "order": 1,
+            "options": []
+          }
+        ],
+        "subcategories": []
+      },
+      {
+        "name": "Women's Watches",
+        "slug": "womens-watches",
+        "attributes": [
+          {
+            "name": "Stone/Gem",
+            "inputType": "text",
+            "isRequired": false,
+            "order": 1,
+            "options": []
+          }
+        ],
+        "subcategories": []
+      },
+      {
+        "name": "Couples Watches",
+        "slug": "couples-watches",
+        "attributes": [
+          {
+            "name": "Set Includes",
+            "inputType": "select",
+            "isRequired": true,
+            "order": 1,
+            "options": [
+              {
+                "label": "His & Hers",
+                "value": "his-hers"
+              },
+              {
+                "label": "His Only",
+                "value": "his-only"
+              },
+              {
+                "label": "Hers Only",
+                "value": "hers-only"
+              },
+              {
+                "label": "His & Hers + Box",
+                "value": "his-hers-box"
+              }
+            ]
+          }
+        ],
+        "subcategories": []
+      },
+      {
+        "name": "Smart Watches",
+        "slug": "smart-watches",
+        "attributes": [
+          {
+            "name": "Screen Size",
+            "inputType": "text",
+            "isRequired": true,
+            "order": 1,
+            "options": []
+          },
+          {
+            "name": "Screen Resolution",
+            "inputType": "text",
+            "isRequired": false,
+            "order": 2,
+            "options": []
+          },
+          {
+            "name": "Battery Capacity",
+            "inputType": "text",
+            "isRequired": false,
+            "order": 3,
+            "options": []
+          },
+          {
+            "name": "Charging Method",
+            "inputType": "select",
+            "isRequired": false,
+            "order": 4,
+            "options": [
+              {
+                "label": "Magnetic",
+                "value": "magnetic"
+              },
+              {
+                "label": "USB",
+                "value": "usb"
+              },
+              {
+                "label": "Wireless",
+                "value": "wireless"
+              }
+            ]
+          },
+          {
+            "name": "Waterproof Rating",
+            "inputType": "select",
+            "isRequired": false,
+            "order": 5,
+            "options": [
+              {
+                "label": "IP67",
+                "value": "ip67"
+              },
+              {
+                "label": "IP68",
+                "value": "ip68"
+              },
+              {
+                "label": "5 ATM",
+                "value": "5-atm"
+              },
+              {
+                "label": "None",
+                "value": "none"
+              }
+            ]
+          },
+          {
+            "name": "Smart Features",
+            "inputType": "checkbox",
+            "isRequired": false,
+            "order": 6,
+            "options": [
+              {
+                "label": "Heart Rate Monitor",
+                "value": "heart-rate-monitor"
+              },
+              {
+                "label": "Blood Oxygen",
+                "value": "blood-oxygen"
+              },
+              {
+                "label": "Blood Pressure",
+                "value": "blood-pressure"
+              },
+              {
+                "label": "Sleep Tracking",
+                "value": "sleep-tracking"
+              },
+              {
+                "label": "Pedometer",
+                "value": "pedometer"
+              },
+              {
+                "label": "Call/SMS Notifications",
+                "value": "call-sms-notifications"
+              },
+              {
+                "label": "Remote Camera",
+                "value": "remote-camera"
+              },
+              {
+                "label": "Music Control",
+                "value": "music-control"
+              },
+              {
+                "label": "GPS",
+                "value": "gps"
+              },
+              {
+                "label": "Custom Watch Face",
+                "value": "custom-watch-face"
+              },
+              {
+                "label": "Multi-Sport Mode",
+                "value": "multi-sport-mode"
+              }
+            ]
+          }
+        ],
+        "subcategories": []
+      },
+      {
+        "name": "Dragon & Lotus Collection",
+        "slug": "dragon-lotus",
+        "attributes": [
+          {
+            "name": "Design Theme",
+            "inputType": "select",
+            "isRequired": false,
+            "order": 1,
+            "options": [
+              {
+                "label": "Dragon",
+                "value": "dragon"
+              },
+              {
+                "label": "Lotus",
+                "value": "lotus"
+              },
+              {
+                "label": "Dragon & Lotus",
+                "value": "dragon-lotus"
+              },
+              {
+                "label": "Phoenix",
+                "value": "phoenix"
+              }
+            ]
+          }
+        ],
+        "subcategories": []
+      }
+    ]
+  },
+  {
+    "name": "Bracelets",
+    "slug": "bracelets",
+    "attributes": [
+      {
+        "name": "Material",
+        "inputType": "select",
+        "isRequired": true,
+        "order": 1,
+        "options": [
+          {
+            "label": "Walnut + Stainless Steel",
+            "value": "walnut-stainless-steel"
+          },
+          {
+            "label": "Bamboo + Stainless Steel",
+            "value": "bamboo-stainless-steel"
+          },
+          {
+            "label": "Ebony + Stainless Steel",
+            "value": "ebony-stainless-steel"
+          },
+          {
+            "label": "Sandalwood + Stainless Steel",
+            "value": "sandalwood-stainless-steel"
+          },
+          {
+            "label": "Full Wood",
+            "value": "full-wood"
+          },
+          {
+            "label": "Leather + Wood",
+            "value": "leather-wood"
+          }
+        ]
+      },
+      {
+        "name": "Width",
+        "inputType": "text",
+        "isRequired": false,
+        "order": 2,
+        "options": []
+      },
+      {
+        "name": "Length",
+        "inputType": "text",
+        "isRequired": false,
+        "order": 3,
+        "options": []
+      },
+      {
+        "name": "Thickness",
+        "inputType": "text",
+        "isRequired": false,
+        "order": 4,
+        "options": []
+      },
+      {
+        "name": "Weight",
+        "inputType": "text",
+        "isRequired": false,
+        "order": 5,
+        "options": []
+      },
+      {
+        "name": "Clasp Type",
+        "inputType": "select",
+        "isRequired": false,
+        "order": 6,
+        "options": [
+          {
+            "label": "Jewelry Clasp",
+            "value": "jewelry-clasp"
+          },
+          {
+            "label": "Magnetic",
+            "value": "magnetic"
+          },
+          {
+            "label": "Buckle",
+            "value": "buckle"
+          },
+          {
+            "label": "Lobster Clasp",
+            "value": "lobster-clasp"
+          }
+        ]
+      }
+    ],
+    "subcategories": [
+      {
+        "name": "Wooden Bracelets",
+        "slug": "wooden-bracelets",
+        "attributes": [],
+        "subcategories": []
+      }
+    ]
+  },
+  {
+    "name": "Sunglasses",
+    "slug": "sunglasses",
+    "attributes": [
+      {
+        "name": "Frame Material",
+        "inputType": "select",
+        "isRequired": true,
+        "order": 1,
+        "options": [
+          {
+            "label": "Wooden",
+            "value": "wooden"
+          },
+          {
+            "label": "Bamboo",
+            "value": "bamboo"
+          },
+          {
+            "label": "Wood + Metal",
+            "value": "wood-metal"
+          },
+          {
+            "label": "Acetate + Wood",
+            "value": "acetate-wood"
+          }
+        ]
+      },
+      {
+        "name": "Lens Material",
+        "inputType": "select",
+        "isRequired": true,
+        "order": 2,
+        "options": [
+          {
+            "label": "Polarized TAC",
+            "value": "polarized-tac"
+          },
+          {
+            "label": "UV400",
+            "value": "uv400"
+          },
+          {
+            "label": "Gradient",
+            "value": "gradient"
+          },
+          {
+            "label": "Mirror",
+            "value": "mirror"
+          }
+        ]
+      },
+      {
+        "name": "Lens Color",
+        "inputType": "select",
+        "isRequired": false,
+        "order": 3,
+        "options": [
+          {
+            "label": "Black",
+            "value": "black"
+          },
+          {
+            "label": "Brown",
+            "value": "brown"
+          },
+          {
+            "label": "Blue",
+            "value": "blue"
+          },
+          {
+            "label": "Green",
+            "value": "green"
+          },
+          {
+            "label": "Gray",
+            "value": "gray"
+          },
+          {
+            "label": "Gold Mirror",
+            "value": "gold-mirror"
+          },
+          {
+            "label": "Silver Mirror",
+            "value": "silver-mirror"
+          }
+        ]
+      },
+      {
+        "name": "Frame Shape",
+        "inputType": "select",
+        "isRequired": false,
+        "order": 4,
+        "options": [
+          {
+            "label": "Wayfarer",
+            "value": "wayfarer"
+          },
+          {
+            "label": "Aviator",
+            "value": "aviator"
+          },
+          {
+            "label": "Round",
+            "value": "round"
+          },
+          {
+            "label": "Square",
+            "value": "square"
+          },
+          {
+            "label": "Cat Eye",
+            "value": "cat-eye"
+          },
+          {
+            "label": "Sport",
+            "value": "sport"
+          }
+        ]
+      },
+      {
+        "name": "UV Protection",
+        "inputType": "select",
+        "isRequired": false,
+        "order": 5,
+        "options": [
+          {
+            "label": "UV400",
+            "value": "uv400"
+          },
+          {
+            "label": "UV380",
+            "value": "uv380"
+          },
+          {
+            "label": "None",
+            "value": "none"
+          }
+        ]
+      },
+      {
+        "name": "Frame Width",
+        "inputType": "text",
+        "isRequired": false,
+        "order": 6,
+        "options": []
+      }
+    ],
+    "subcategories": []
+  },
+  {
+    "name": "Personalized Gifts",
+    "slug": "personalized-gifts",
+    "attributes": [
+      {
+        "name": "Gift Type",
+        "inputType": "select",
+        "isRequired": true,
+        "order": 1,
+        "options": [
+          {
+            "label": "Engraved Watch",
+            "value": "engraved-watch"
+          },
+          {
+            "label": "Watch + Bracelet Set",
+            "value": "watch-bracelet-set"
+          },
+          {
+            "label": "Gift Box Set",
+            "value": "gift-box-set"
+          },
+          {
+            "label": "Custom Name Item",
+            "value": "custom-name-item"
+          },
+          {
+            "label": "Anniversary Set",
+            "value": "anniversary-set"
+          },
+          {
+            "label": "Groomsmen Set",
+            "value": "groomsmen-set"
+          }
+        ]
+      },
+      {
+        "name": "Occasion",
+        "inputType": "select",
+        "isRequired": false,
+        "order": 2,
+        "options": [
+          {
+            "label": "Birthday",
+            "value": "birthday"
+          },
+          {
+            "label": "Anniversary",
+            "value": "anniversary"
+          },
+          {
+            "label": "Wedding",
+            "value": "wedding"
+          },
+          {
+            "label": "Christmas",
+            "value": "christmas"
+          },
+          {
+            "label": "Valentine's Day",
+            "value": "valentine-s-day"
+          },
+          {
+            "label": "Father's Day",
+            "value": "father-s-day"
+          },
+          {
+            "label": "Mother's Day",
+            "value": "mother-s-day"
+          },
+          {
+            "label": "Graduation",
+            "value": "graduation"
+          },
+          {
+            "label": "Groomsmen",
+            "value": "groomsmen"
+          }
+        ]
+      },
+      {
+        "name": "Engravable",
+        "inputType": "radio",
+        "isRequired": false,
+        "order": 3,
+        "options": [
+          {
+            "label": "Yes",
+            "value": "yes"
+          },
+          {
+            "label": "No",
+            "value": "no"
+          }
+        ]
+      }
+    ],
+    "subcategories": []
+  }
+]
