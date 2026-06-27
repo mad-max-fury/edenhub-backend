@@ -21,6 +21,17 @@ const GROUP = "Order Management";
 router.use(auth);
 
 post(
+  "/validate-address",
+  {
+    resource: "Order",
+    action: "Read",
+    group: GROUP,
+    name: "post_validate_address",
+  },
+  orderCtrl.validateAddressHandler,
+);
+
+post(
   "/rates",
   {
     resource: "Order",

@@ -123,8 +123,14 @@ const resolveServiceCodes = (_country?: string): string | undefined => {
   return undefined;
 };
 
+export const validateAndGetCode = async (input: ShipAddressInput): Promise<{ addressCode: string }> => {
+  const addressCode = await validateAddress(input);
+  return { addressCode };
+};
+
 export const fetchRates = async (params: {
   receiver: ShipAddressInput;
+  receiverAddressCode?: string;
   items: RateItem[];
   categoryId?: number;
   pickupDate?: string;
@@ -133,7 +139,9 @@ export const fetchRates = async (params: {
 }): Promise<FetchRatesResult> => {
   const [senderCode, receiverCode, categoryId] = await Promise.all([
     getOriginAddressCode(),
-    validateAddress(params.receiver),
+    params.receiverAddressCode
+      ? Promise.resolve(params.receiverAddressCode)
+      : validateAddress(params.receiver),
     params.categoryId
       ? Promise.resolve(params.categoryId)
       : getDefaultCategoryId(),

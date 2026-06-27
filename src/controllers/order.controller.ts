@@ -9,6 +9,15 @@ import {
 } from "../utils/pagination.utils";
 import log from "../utils/logger";
 
+export const validateAddressHandler = catchAsync(
+  async (req: Request, res: Response) => {
+    const { name, email, phone, address } = req.body;
+    const shipping = await import("../services/shipping.service");
+    const result = await shipping.validateAndGetCode({ name, email, phone, address });
+    res.json({ status: "success", data: result });
+  },
+);
+
 export const fetchRatesHandler = catchAsync(
   async (req: Request, res: Response) => {
     const rates = await orderService.getRates(req.body);

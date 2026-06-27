@@ -138,6 +138,7 @@ export const getRates = async (input: FetchRatesInput) => {
       phone: r.phone || "08000000000",
       address: `${r.address}, ${r.city}, ${r.state}, ${r.country}`,
     },
+    receiverAddressCode: r.addressCode,
     items: rateItems,
     country: r.country,
   });
