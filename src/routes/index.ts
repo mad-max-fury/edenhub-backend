@@ -21,6 +21,7 @@ import faq from "./faq.routes";
 import conversation from "./conversation.routes";
 import dispute from "./dispute.routes";
 import question from "./question.routes";
+import storeAddress from "./storeAddress.routes";
 const router = express.Router();
 
 router.get("/healthcheck", (_, res) => res.sendStatus(200));
@@ -46,4 +47,5 @@ router.use("/api/faqs/", faq);
 router.use("/api/conversations/", conversation);
 router.use("/api/disputes/", dispute);
 router.use("/api/questions/", question);
+router.use("/api/store-addresses/", storeAddress);
 export default router;

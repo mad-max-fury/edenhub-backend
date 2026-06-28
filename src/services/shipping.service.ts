@@ -55,12 +55,24 @@ let cachedOriginCode: string | null = null;
 export const getOriginAddressCode = async (): Promise<string> => {
   if (cachedOriginCode) return cachedOriginCode;
 
+  // 1. Try DB default store address
+  try {
+    const StoreAddressModel = (await import("../models/storeAddress.model")).default;
+    const defaultAddr = await StoreAddressModel.findOne({ isDefault: true }).lean();
+    if (defaultAddr?.addressCode) {
+      cachedOriginCode = String(defaultAddr.addressCode);
+      return cachedOriginCode;
+    }
+  } catch {}
+
+  // 2. Try env var
   const presetCode = process.env.SHIP_ORIGIN_ADDRESS_CODE;
   if (presetCode) {
     cachedOriginCode = presetCode;
     return cachedOriginCode;
   }
 
+  // 3. Validate from config
   const origin = getConfig("shipOrigin");
   cachedOriginCode = await validateAddress({
     name: origin.name,
