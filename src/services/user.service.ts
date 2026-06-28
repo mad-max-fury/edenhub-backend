@@ -1,10 +1,12 @@
 import { FilterQuery, Types } from "mongoose";
 import UserModel, { User, UserAddress } from "../models/user.model";
+import OrderModel, { OrderStatus, PaymentStatus, FulfillmentStatus } from "../models/order.model";
 import { DocumentType } from "@typegoose/typegoose";
 import AppError from "../errors/appError";
 import { IChangePasswordInput } from "../schemas/user.schemas";
 import { IPaginationQuery } from "../utils/pagination.utils";
 import { findRoleByName } from "./role.service";
+import log from "../utils/logger";
 
 export const findOneUser = async (filter: FilterQuery<User>) => {
   return await UserModel.findOne(filter);
@@ -201,4 +203,76 @@ export const changeUserPassword = async (
   await user.save();
 
   return user;
+};
+
+export const requestAccountDeletion = async (userId: string, reason?: string) => {
+  const pending = await OrderModel.countDocuments({
+    customer: userId,
+    status: { $nin: [OrderStatus.Completed, OrderStatus.Cancelled] },
+    fulfillmentStatus: { $ne: FulfillmentStatus.Delivered },
+    paymentStatus: { $ne: PaymentStatus.Refunded },
+  });
+  if (pending > 0) {
+    throw new AppError(
+      `You have ${pending} pending order${pending > 1 ? "s" : ""}. Complete or cancel them before deleting your account.`,
+      400,
+    );
+  }
+
+  const user = await UserModel.findById(userId);
+  if (!user) throw new AppError("User not found", 404);
+
+  user.deletionRequestedAt = new Date();
+  user.deletionReason = reason || "User requested deletion";
+  await user.save();
+
+  return { deletionRequestedAt: user.deletionRequestedAt };
+};
+
+export const cancelAccountDeletion = async (userId: string) => {
+  const user = await UserModel.findById(userId);
+  if (!user) throw new AppError("User not found", 404);
+  if (!user.deletionRequestedAt) throw new AppError("No deletion request found", 400);
+
+  user.deletionRequestedAt = undefined;
+  user.deletionReason = undefined;
+  await user.save();
+
+  return { cancelled: true };
+};
+
+export const getDeletionStatus = async (userId: string) => {
+  const user = await UserModel.findById(userId).select("deletionRequestedAt deletionReason");
+  if (!user) throw new AppError("User not found", 404);
+
+  if (!user.deletionRequestedAt) return { requested: false };
+
+  const deleteAt = new Date(user.deletionRequestedAt);
+  deleteAt.setDate(deleteAt.getDate() + 30);
+
+  return {
+    requested: true,
+    requestedAt: user.deletionRequestedAt,
+    reason: user.deletionReason,
+    scheduledDeletionDate: deleteAt,
+    daysRemaining: Math.max(0, Math.ceil((deleteAt.getTime() - Date.now()) / 86_400_000)),
+  };
+};
+
+export const purgeExpiredDeletions = async () => {
+  const cutoff = new Date();
+  cutoff.setDate(cutoff.getDate() - 30);
+
+  const expired = await UserModel.find({
+    deletionRequestedAt: { $lte: cutoff },
+  });
+
+  let purged = 0;
+  for (const user of expired) {
+    await UserModel.findByIdAndDelete(user._id);
+    purged++;
+  }
+
+  if (purged > 0) log.info(`Account purge: ${purged} account(s) permanently deleted`);
+  return { purged };
 };

@@ -13,6 +13,7 @@ const read = (name: string) => ({
 });
 
 get("/products", read("get_catalog_products"), catalogCtrl.getCatalogProductsHandler);
+get("/best", read("get_catalog_best_sellers"), catalogCtrl.getBestSellersHandler);
 get(
   "/products/:id",
   read("get_catalog_product_by_id"),

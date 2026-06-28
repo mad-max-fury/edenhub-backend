@@ -54,6 +54,25 @@ export const validateAddress = async (
 let cachedOriginCode: string | null = null;
 export const getOriginAddressCode = async (): Promise<string> => {
   if (cachedOriginCode) return cachedOriginCode;
+
+  // 1. Try DB default store address
+  try {
+    const StoreAddressModel = (await import("../models/storeAddress.model")).default;
+    const defaultAddr = await StoreAddressModel.findOne({ isDefault: true }).lean();
+    if (defaultAddr?.addressCode) {
+      cachedOriginCode = String(defaultAddr.addressCode);
+      return cachedOriginCode;
+    }
+  } catch {}
+
+  // 2. Try env var
+  const presetCode = process.env.SHIP_ORIGIN_ADDRESS_CODE;
+  if (presetCode) {
+    cachedOriginCode = presetCode;
+    return cachedOriginCode;
+  }
+
+  // 3. Validate from config
   const origin = getConfig("shipOrigin");
   cachedOriginCode = await validateAddress({
     name: origin.name,
@@ -88,6 +107,7 @@ export interface RateItem {
 export interface CourierRate {
   courierId: string;
   courierName: string;
+  courierLogo?: string;
   serviceCode: string;
   amount: number;
   currency: string;
@@ -100,15 +120,47 @@ export interface FetchRatesResult {
   couriers: CourierRate[];
 }
 
+const INTERNATIONAL_COURIERS = ["dhl", "ups", "aramex", "skynet", "topship"];
+const DOMESTIC_COURIERS = ["gigl", "speedaf", "redstar", "courierplus"];
+
+const AFRICAN_COUNTRIES = [
+  "nigeria", "ghana", "kenya", "south africa", "cameroon", "senegal",
+  "tanzania", "uganda", "ethiopia", "rwanda", "ivory coast", "egypt",
+  "morocco", "algeria", "tunisia", "angola", "mozambique", "zimbabwe",
+  "botswana", "namibia", "zambia", "malawi", "mali", "niger", "chad",
+  "benin", "togo", "burkina faso", "guinea", "sierra leone", "liberia",
+  "gambia", "mauritania", "congo", "gabon", "equatorial guinea",
+  "central african republic", "democratic republic of the congo",
+  "south sudan", "sudan", "somalia", "djibouti", "eritrea", "comoros",
+  "mauritius", "seychelles", "madagascar", "cape verde", "sao tome and principe",
+  "lesotho", "eswatini", "swaziland",
+];
+
+const isSandbox = () => (apiKey() || "").startsWith("sb_sandbox");
+
+const resolveServiceCodes = (_country?: string): string | undefined => {
+  return undefined;
+};
+
+export const validateAndGetCode = async (input: ShipAddressInput): Promise<{ addressCode: string }> => {
+  const addressCode = await validateAddress(input);
+  return { addressCode };
+};
+
 export const fetchRates = async (params: {
   receiver: ShipAddressInput;
+  receiverAddressCode?: string;
   items: RateItem[];
   categoryId?: number;
   pickupDate?: string;
+  country?: string;
+  serviceCodes?: string;
 }): Promise<FetchRatesResult> => {
   const [senderCode, receiverCode, categoryId] = await Promise.all([
     getOriginAddressCode(),
-    validateAddress(params.receiver),
+    params.receiverAddressCode
+      ? Promise.resolve(params.receiverAddressCode)
+      : validateAddress(params.receiver),
     params.categoryId
       ? Promise.resolve(params.categoryId)
       : getDefaultCategoryId(),
@@ -118,7 +170,12 @@ export const fetchRates = async (params: {
     params.pickupDate ||
     new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
 
-  const body = await shipbubbleFetch("/shipping/fetch_rates", {
+  const codes = params.serviceCodes || resolveServiceCodes(params.country);
+  const ratePath = codes
+    ? `/shipping/fetch_rates/${encodeURIComponent(codes)}`
+    : "/shipping/fetch_rates";
+
+  const body = await shipbubbleFetch(ratePath, {
     method: "POST",
     body: JSON.stringify({
       sender_address_code: senderCode,
@@ -139,6 +196,7 @@ export const fetchRates = async (params: {
   const couriers: CourierRate[] = (body.data.couriers || []).map((c: any) => ({
     courierId: String(c.courier_id ?? c.courier_image ?? ""),
     courierName: c.courier_name,
+    courierLogo: c.courier_image || undefined,
     serviceCode: c.service_code,
     amount: c.total ?? c.shipment_total ?? c.fee ?? 0,
     currency: c.currency || "NGN",
@@ -150,6 +208,11 @@ export const fetchRates = async (params: {
     receiverAddressCode: receiverCode,
     couriers,
   };
+};
+
+export const getAvailableCouriers = async () => {
+  const body = await shipbubbleFetch("/shipping/couriers");
+  return body.data;
 };
 
 export interface CreateLabelResult {

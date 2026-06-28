@@ -23,17 +23,6 @@ export class AuthEmailTemplates {
     );
   }
 
-  public static verification(name: string, code: string): string {
-    return this.baseLayout(
-      `
-      <mj-text font-family="Inter" font-size="14px" line-height="30px">Please verify your identity using the One-Time Password (OTP) below:</mj-text>
-      <mj-text font-family="Inter" font-size="28px" color="${this.colors.primary}" font-weight="700" align="center" padding="20px 0">${code}</mj-text>
-      <mj-text font-size="12px" color="${this.colors.gray}" align="center">This code expires in 15 minutes.</mj-text>
-    `,
-      name,
-    );
-  }
-
   // Dedicated two-factor login code (distinct from password reset).
   public static twoFactorCode(name: string, code: string): string {
     return this.baseLayout(
@@ -52,16 +41,6 @@ export class AuthEmailTemplates {
       <mj-text font-family="Inter" font-size="14px" line-height="30px">We received a request to reset your password. Use the code below:</mj-text>
       <mj-text font-family="Inter" font-size="28px" color="${this.colors.primary}" font-weight="700" align="center" padding="20px 0">${code}</mj-text>
       <mj-text font-size="12px" color="${this.colors.gray}" align="center">This code expires in 15 minutes.</mj-text>
-    `,
-      name,
-    );
-  }
-
-  public static resetPasswordConfirmation(name: string): string {
-    return this.baseLayout(
-      `
-      <mj-text font-family="Inter" font-size="14px" line-height="30px">Success! Your password has been successfully reset.</mj-text>
-      ${emailButton("Login Now", `${this.storefront}/auth/login`)}
     `,
       name,
     );

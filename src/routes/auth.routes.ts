@@ -18,11 +18,18 @@ import {
   meHandler,
   updateMeHandler,
   verifyTwoFactorHandler,
+  requestDeletionHandler,
+  cancelDeletionHandler,
+  deletionStatusHandler,
+  generate2FAHandler,
+  enable2FAHandler,
+  enableEmail2FAHandler,
+  disable2FAHandler,
 } from "../controllers/auth.controller";
 
 import { createAttributeRouter } from "../utils/routeBuilder.utils";
 
-const { router, post, patch, get } = createAttributeRouter();
+const { router, post, patch, get, delete: del } = createAttributeRouter();
 
 get(
   "/me",
@@ -140,6 +147,57 @@ post(
   },
   auth,
   logoutHandler,
+);
+
+// Customer 2FA
+post(
+  "/2fa/setup",
+  { resource: "Auth", action: "Write", group: "System Access", name: "post_auth_2fa_setup" },
+  auth,
+  generate2FAHandler,
+);
+
+post(
+  "/2fa/enable",
+  { resource: "Auth", action: "Write", group: "System Access", name: "post_auth_2fa_enable" },
+  auth,
+  enable2FAHandler,
+);
+
+post(
+  "/2fa/enable-email",
+  { resource: "Auth", action: "Write", group: "System Access", name: "post_auth_2fa_enable_email" },
+  auth,
+  enableEmail2FAHandler,
+);
+
+post(
+  "/2fa/disable",
+  { resource: "Auth", action: "Write", group: "System Access", name: "post_auth_2fa_disable" },
+  auth,
+  disable2FAHandler,
+);
+
+// Account deletion (30-day grace period)
+post(
+  "/me/delete",
+  { resource: "Auth", action: "Write", group: "System Access", name: "post_auth_delete_account" },
+  auth,
+  requestDeletionHandler,
+);
+
+patch(
+  "/me/delete/cancel",
+  { resource: "Auth", action: "Write", group: "System Access", name: "patch_auth_cancel_deletion" },
+  auth,
+  cancelDeletionHandler,
+);
+
+get(
+  "/me/delete/status",
+  { resource: "Auth", action: "Read", group: "System Access", name: "get_auth_deletion_status" },
+  auth,
+  deletionStatusHandler,
 );
 
 export default router;

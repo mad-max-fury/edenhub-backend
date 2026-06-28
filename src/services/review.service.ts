@@ -78,6 +78,7 @@ export const createReview = async (
 export const getProductReviews = async (
   productId: string,
   query: IPaginationQuery,
+  userId?: string,
 ) => {
   const { pageNumber, pageSize } = query;
   const skip = (pageNumber - 1) * pageSize;
@@ -85,13 +86,28 @@ export const getProductReviews = async (
   const [reviews, totalCount] = await Promise.all([
     ReviewModel.find({ product: productId })
       .populate("user", "firstName lastName profilePicture")
+      .populate("replies.user", "firstName lastName")
       .sort("-createdAt")
       .skip(skip)
       .limit(pageSize),
     ReviewModel.countDocuments({ product: productId }),
   ]);
 
-  return { reviews, totalCount };
+  let canReview = false;
+  if (userId) {
+    const hasDelivered = await OrderModel.countDocuments({
+      customer: userId,
+      "items.product": productId,
+      fulfillmentStatus: "delivered",
+    });
+    const alreadyReviewed = await ReviewModel.countDocuments({
+      user: userId,
+      product: productId,
+    });
+    canReview = hasDelivered > 0 && alreadyReviewed === 0;
+  }
+
+  return { reviews, totalCount, canReview };
 };
 
 // Split the user's reviewable products into pending (delivered, not reviewed)
@@ -129,4 +145,37 @@ export const getMyReviews = async (userId: string) => {
   });
 
   return { pending: Array.from(pendingMap.values()), reviewed };
+};
+
+export const addReply = async (
+  reviewId: string,
+  userId: string,
+  comment: string,
+  isAdmin: boolean,
+) => {
+  const review = await ReviewModel.findById(reviewId);
+  if (!review) throw new AppError("Review not found", 404);
+
+  review.replies.push({ user: userId as any, comment, isAdmin, createdAt: new Date() });
+  await review.save();
+  return review.populate([
+    { path: "user", select: "firstName lastName profilePicture" },
+    { path: "replies.user", select: "firstName lastName" },
+  ]);
+};
+
+export const toggleLike = async (reviewId: string, userId: string) => {
+  const review = await ReviewModel.findById(reviewId);
+  if (!review) throw new AppError("Review not found", 404);
+
+  const idx = review.likedBy.indexOf(userId);
+  if (idx >= 0) {
+    review.likedBy.splice(idx, 1);
+    review.likes = Math.max(0, review.likes - 1);
+  } else {
+    review.likedBy.push(userId);
+    review.likes += 1;
+  }
+  await review.save();
+  return { likes: review.likes, liked: idx < 0 };
 };

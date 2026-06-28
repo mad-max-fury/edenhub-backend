@@ -13,24 +13,26 @@ import path from "path";
 
 export const uploadResource = catchAsync(
   async (req: Request, res: Response) => {
-    if (!req.file) throw new AppError("No file uploaded", 400);
+    const file = (req as any).file as { buffer: Buffer; mimetype: string; originalname: string } | undefined;
+    if (!file) throw new AppError("No file uploaded", 400);
 
     const resourceType = (req.query?.type as string) || "general";
-    const mimeTypeGroup = req.file.mimetype.split("/")[0] || "other";
+    const mimeTypeGroup = file.mimetype.split("/")[0] || "other";
 
     const subFolder =
       mimeTypeGroup === "application" ? "documents" : mimeTypeGroup;
 
-    let fileBuffer = req.file.buffer;
-    let contentType = req.file.mimetype;
-    let originalName = path.parse(req.file.originalname).name;
-    let extension = path.extname(req.file.originalname);
+    let fileBuffer = file.buffer;
+    let contentType = file.mimetype;
+    let originalName = path.parse(file.originalname).name;
+    let extension = path.extname(file.originalname);
 
-    if (req.file.mimetype.startsWith("image/")) {
+    const isRasterImage = /^image\/(jpeg|png|webp|bmp|tiff)$/.test(file.mimetype);
+    if (isRasterImage) {
       contentType = "image/webp";
       extension = ".webp";
 
-      fileBuffer = await sharp(req.file.buffer)
+      fileBuffer = await sharp(file.buffer)
         .resize(1200, 1200, { fit: "inside", withoutEnlargement: true })
         .webp({ quality: 80 })
         .toBuffer();

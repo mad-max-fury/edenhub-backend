@@ -4,7 +4,7 @@ import validateResource from "../middlewares/validateResource";
 import { createAttributeRouter } from "../utils/routeBuilder.utils";
 import { createReviewSchema } from "../schemas/review.schema";
 
-const { router, get, post } = createAttributeRouter();
+const { router, get, post, patch } = createAttributeRouter();
 
 const GROUP = "Reviews";
 const meta = (name: string, action: "Read" | "Write") => ({
@@ -29,6 +29,20 @@ post(
   auth,
   validateResource(createReviewSchema),
   reviewCtrl.createReviewHandler,
+);
+
+patch(
+  "/:id/like",
+  meta("patch_review_like", "Write"),
+  auth,
+  reviewCtrl.toggleLikeHandler,
+);
+
+post(
+  "/:id/reply",
+  meta("post_review_reply", "Write"),
+  auth,
+  reviewCtrl.replyHandler,
 );
 
 export default router;

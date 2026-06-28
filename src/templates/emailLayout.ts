@@ -1,5 +1,9 @@
 // Shared MJML layout + helpers used by every transactional email template.
 
+import { getConfig } from "../config";
+
+const storeUrl = () => getConfig("storefrontUrl") || "https://edenwoodwatchhub.com";
+
 export const emailColors = {
   primary: "#342721",
   background: "#EDEFF5",
@@ -45,7 +49,7 @@ export const renderEmailLayout = (content: string, name: string): string => `
     <mj-wrapper padding="40px 20px">
       <mj-section background-color="${emailColors.white}" padding="40px" border-radius="8px">
         <mj-column>
-          <mj-image width="147px" src="https://designspell.files.wordpress.com/2012/01/sciolino-paris-bw.jpg" href="https://edenhub.com" padding-bottom="30px" />
+          <mj-image width="160px" src="${storeUrl()}/logo-email.png" href="${storeUrl()}" padding-bottom="24px" alt="Eden Wood Watch Hub" />
 
           <mj-text font-family="Inter" font-size="17px" font-weight="600" color="${emailColors.text}" padding-bottom="20px">
             Dear ${name},
@@ -53,20 +57,34 @@ export const renderEmailLayout = (content: string, name: string): string => `
 
           ${content}
 
-          <mj-divider border-width="1px" border-style="solid" border-color="lightgrey" padding-top="30px" />
-          <mj-text font-family="Inter" font-size="14px" line-height="20px" color="${emailColors.text}">
-            Need help? Contact <span style="color: ${emailColors.primary}; font-weight: 600">support@edenhub.com</span>
+          <mj-divider border-width="1px" border-style="solid" border-color="${emailColors.line}" padding-top="30px" />
+
+          <mj-text font-family="Inter" font-size="13px" line-height="22px" color="${emailColors.gray}" padding-top="16px">
+            Need help? Contact us at <a href="mailto:support@edenwoodwatchhub.com" style="color: ${emailColors.primary}; font-weight: 600; text-decoration: none;">support@edenwoodwatchhub.com</a>
           </mj-text>
-          <mj-text font-family="Inter" font-size="14px" color="${emailColors.text}" font-weight="500">
-            The EdenHub Team
+
+          <mj-text font-family="Inter" font-size="13px" color="${emailColors.gray}" padding-top="8px" padding-bottom="0">
+            <a href="${storeUrl()}/shop" style="color: ${emailColors.primary}; text-decoration: none; font-weight: 500;">Shop</a> &nbsp;·&nbsp;
+            <a href="${storeUrl()}/c/account/orders" style="color: ${emailColors.primary}; text-decoration: none; font-weight: 500;">My Orders</a> &nbsp;·&nbsp;
+            <a href="${storeUrl()}/c/account" style="color: ${emailColors.primary}; text-decoration: none; font-weight: 500;">My Account</a> &nbsp;·&nbsp;
+            <a href="${storeUrl()}/faqs" style="color: ${emailColors.primary}; text-decoration: none; font-weight: 500;">FAQs</a>
+          </mj-text>
+
+          <mj-text font-family="Inter" font-size="14px" color="${emailColors.text}" font-weight="500" padding-top="16px">
+            The Eden Wood Watch Hub Team
           </mj-text>
         </mj-column>
       </mj-section>
 
       <mj-section padding-top="20px">
         <mj-column>
-          <mj-text font-family="Inter" font-size="12px" align="center" color="${emailColors.gray}">
-            © 2026 EdenHub Limited. All rights reserved.
+          <mj-text font-family="Inter" font-size="11px" align="center" color="${emailColors.gray}">
+            © ${new Date().getFullYear()} Eden Wood Watch Hub. All rights reserved.
+          </mj-text>
+          <mj-text font-family="Inter" font-size="11px" align="center" color="${emailColors.gray}" padding-top="4px">
+            <a href="${storeUrl()}/privacy" style="color: ${emailColors.gray}; text-decoration: underline;">Privacy Policy</a> &nbsp;·&nbsp;
+            <a href="${storeUrl()}/terms" style="color: ${emailColors.gray}; text-decoration: underline;">Terms</a> &nbsp;·&nbsp;
+            <a href="${storeUrl()}/shipping-returns" style="color: ${emailColors.gray}; text-decoration: underline;">Shipping & Returns</a>
           </mj-text>
         </mj-column>
       </mj-section>

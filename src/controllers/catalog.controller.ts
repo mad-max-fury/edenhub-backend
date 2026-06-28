@@ -25,6 +25,8 @@ export const getCatalogProductsHandler = catchAsync(
       minPrice: toNum(req.query.minPrice),
       maxPrice: toNum(req.query.maxPrice),
       sort: req.query.sort as string,
+      audience: req.query.audience as string,
+      tag: req.query.tag as string,
     });
 
     const metadata = getPaginationMetadata(
@@ -70,6 +72,21 @@ export const getCatalogBrandsHandler = catchAsync(
       status: "success",
       message: "Brands retrieved successfully",
       data: brands,
+    });
+  },
+);
+
+export const getBestSellersHandler = catchAsync(
+  async (req: Request, res: Response) => {
+    const products = await productService.getBestSellers({
+      limit: parseInt(req.query.limit as string) || 8,
+      audience: req.query.audience as string,
+      category: req.query.category as string,
+    });
+    res.status(200).json({
+      status: "success",
+      message: "Best sellers retrieved successfully",
+      data: products,
     });
   },
 );

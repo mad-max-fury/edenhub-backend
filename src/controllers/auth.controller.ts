@@ -8,12 +8,21 @@ import {
   resetPassword,
   refreshAccessToken,
   signToken,
+  generate2FASecret,
+  enable2FA,
+  enableEmail2FA,
+  disable2FA,
 } from "../services/auth.service";
 import {
   CreateUserInputSchema,
   IVerifyGoogleCodeInput,
 } from "../schemas/auth.schemas";
-import { findOneUser } from "../services/user.service";
+import {
+  findOneUser,
+  requestAccountDeletion,
+  cancelAccountDeletion,
+  getDeletionStatus,
+} from "../services/user.service";
 import AppError from "../errors/appError";
 import UserModel, { User } from "../models/user.model";
 import { createAdminNotification } from "../services/notification.service";
@@ -74,17 +83,24 @@ export const loginHandler = catchAsync(async (req: Request, res: Response) => {
 
   const result = await loginUser(email.toLowerCase(), password);
 
-  // 2FA enabled — code was generated; email it and ask for verification.
   if (result.twoFactorRequired) {
-    await mailer.send(
-      result.user.email,
-      "Your EdenHub verification code",
-      AuthEmailTemplates.twoFactorCode(result.user.firstName, result.code),
-    );
+    if (result.twoFactorMethod === "email" && result.code) {
+      await mailer.send(
+        result.user.email,
+        "Your EdenHub verification code",
+        AuthEmailTemplates.twoFactorCode(result.user.firstName, result.code),
+      );
+    }
     return res.status(200).json({
       status: "success",
-      message: "A verification code has been sent to your email",
-      data: { twoFactorRequired: true, email: result.user.email },
+      message: result.twoFactorMethod === "authenticator"
+        ? "Enter the code from your authenticator app"
+        : "A verification code has been sent to your email",
+      data: {
+        twoFactorRequired: true,
+        twoFactorMethod: result.twoFactorMethod,
+        email: result.user.email,
+      },
     });
   }
 
@@ -271,7 +287,12 @@ export const googleVerifyHandler = catchAsync(
         role: defaultRole?._id,
         isVerified: true,
         profilePicture: picture,
+        googleId,
       });
+    } else if (!user.googleId) {
+      user.googleId = googleId;
+      if (picture && !user.profilePicture) user.profilePicture = picture;
+      await user.save();
     }
     const accessToken = signToken(
       user.id,
@@ -287,5 +308,54 @@ export const googleVerifyHandler = catchAsync(
       status: "success",
       data: { user: userJson, accessToken, refreshToken },
     });
+  },
+);
+
+export const requestDeletionHandler = catchAsync(
+  async (req: Request, res: Response) => {
+    const data = await requestAccountDeletion(req.user!.id, req.body.reason);
+    res.status(200).json({ status: "success", data });
+  },
+);
+
+export const cancelDeletionHandler = catchAsync(
+  async (req: Request, res: Response) => {
+    const data = await cancelAccountDeletion(req.user!.id);
+    res.status(200).json({ status: "success", data });
+  },
+);
+
+export const deletionStatusHandler = catchAsync(
+  async (req: Request, res: Response) => {
+    const data = await getDeletionStatus(req.user!.id);
+    res.status(200).json({ status: "success", data });
+  },
+);
+
+export const generate2FAHandler = catchAsync(
+  async (req: Request, res: Response) => {
+    const data = await generate2FASecret(req.user!.id);
+    res.status(200).json({ status: "success", data });
+  },
+);
+
+export const enable2FAHandler = catchAsync(
+  async (req: Request, res: Response) => {
+    const data = await enable2FA(req.user!.id, req.body.token);
+    res.status(200).json({ status: "success", data });
+  },
+);
+
+export const enableEmail2FAHandler = catchAsync(
+  async (req: Request, res: Response) => {
+    const data = await enableEmail2FA(req.user!.id);
+    res.status(200).json({ status: "success", data });
+  },
+);
+
+export const disable2FAHandler = catchAsync(
+  async (req: Request, res: Response) => {
+    const data = await disable2FA(req.user!.id, req.body.token);
+    res.status(200).json({ status: "success", data });
   },
 );

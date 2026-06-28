@@ -9,7 +9,7 @@ import {
   TypeOf,
   z,
 } from "zod";
-import { ProductStatus } from "../models/product.model";
+import { ProductStatus, ProductAudience } from "../models/product.model";
 
 const objectId = (label: string) =>
   string().refine((val) => isValidObjectId(val), {
@@ -22,6 +22,14 @@ const discountSchema = object({
   startDate: string().optional(),
   endDate: string().optional(),
   promotionName: string().optional(),
+}).optional();
+
+const engravingSchema = object({
+  available: boolean().default(false),
+  fee: number().min(0).default(0),
+  maxCharacters: number().min(1).default(20),
+  maxLines: number().min(1).default(1),
+  fonts: array(string()).default([]),
 }).optional();
 
 export const variantSchema = object({
@@ -55,8 +63,13 @@ const productBody = {
   returnableDays: number().min(0).optional(),
   hasWarranty: boolean().default(false),
   warrantyYears: number().min(0).optional(),
+  engraving: engravingSchema,
   variants: array(variantSchema).default([]),
   status: z.nativeEnum(ProductStatus).default(ProductStatus.Active),
+  audience: z.nativeEnum(ProductAudience).default(ProductAudience.Unisex),
+  variationGroup: string().trim().optional(),
+  variationLabel: string().trim().optional(),
+  variationValue: string().trim().optional(),
 };
 
 export const createProductSchema = object({
@@ -82,8 +95,13 @@ export const updateProductSchema = object({
     returnableDays: number().min(0).optional(),
     hasWarranty: boolean().optional(),
     warrantyYears: number().min(0).optional(),
+    engraving: engravingSchema,
     variants: array(variantSchema).optional(),
     status: z.nativeEnum(ProductStatus).optional(),
+    audience: z.nativeEnum(ProductAudience).optional(),
+    variationGroup: string().trim().optional(),
+    variationLabel: string().trim().optional(),
+    variationValue: string().trim().optional(),
   }),
 });
 
@@ -110,8 +128,10 @@ const bulkProductInput = object({
   returnableDays: number().min(0).optional(),
   hasWarranty: boolean().default(false),
   warrantyYears: number().min(0).optional(),
+  engraving: engravingSchema,
   variants: array(variantSchema).default([]),
   status: z.nativeEnum(ProductStatus).default(ProductStatus.Active),
+  audience: z.nativeEnum(ProductAudience).default(ProductAudience.Unisex),
 });
 
 export const bulkCreateProductSchema = object({

@@ -20,7 +20,17 @@ const GROUP = "Order Management";
 
 router.use(auth);
 
-// Storefront-facing checkout (any authenticated user, no admin permission).
+post(
+  "/validate-address",
+  {
+    resource: "Order",
+    action: "Read",
+    group: GROUP,
+    name: "post_validate_address",
+  },
+  orderCtrl.validateAddressHandler,
+);
+
 post(
   "/rates",
   {
@@ -41,16 +51,15 @@ post(
     group: GROUP,
     name: "post_order_create",
   },
-  validateResource(createOrderSchema),
+  // validateResource(createOrderSchema),
   orderCtrl.createOrderHandler,
 );
 
-// ── Customer self-service (auth only, scoped to the buyer) ───────────────────
 router.get("/me", orderCtrl.getMyOrdersHandler);
 router.get("/me/:id", orderCtrl.getMyOrderHandler);
 router.post("/me/:id/verify", orderCtrl.verifyMyOrderHandler);
+router.post("/me/:id/cancel", orderCtrl.cancelMyOrderHandler);
 
-// ── Admin management (permission-gated) ──────────────────────────────────────
 get(
   "/",
   {
@@ -73,6 +82,18 @@ get(
   },
   hasPermission,
   orderCtrl.getOrderStatsHandler,
+);
+
+post(
+  "/reconcile-pending",
+  {
+    resource: "Order",
+    action: "Update",
+    group: GROUP,
+    name: "post_order_reconcile_pending",
+  },
+  hasPermission,
+  orderCtrl.reconcilePendingHandler,
 );
 
 get(

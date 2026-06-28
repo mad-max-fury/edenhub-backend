@@ -3,6 +3,7 @@ import sgMail from "@sendgrid/mail";
 import mjml2html from "mjml";
 import { getConfig } from "../config";
 import AppError from "../errors/appError";
+import log from "./logger";
 
 type EmailProvider = "sendgrid" | "smtp" | "console";
 
@@ -36,7 +37,7 @@ export class MailerService {
     if (requested === "sendgrid") {
       const key = getConfig("sendgridApiKey");
       if (!key) {
-        console.warn(
+        log.warn(
           "[mailer] EMAIL_PROVIDER=sendgrid but SENDGRID_API_KEY is empty — falling back to console.",
         );
         return "console";
@@ -52,7 +53,7 @@ export class MailerService {
     const user = getConfig("smtpUser");
     const pass = getConfig("smtpPass");
     if (!host || host === "smtp.example.com" || !user || !pass) {
-      console.warn(
+      log.warn(
         "[mailer] SMTP credentials missing or placeholder — falling back to console. " +
           "Set SMTP_HOST/SMTP_USER/SMTP_PASS (e.g. Mailtrap or Gmail) to send for real.",
       );
@@ -97,14 +98,15 @@ export class MailerService {
   }
 
   private compileMjml(mjmlString: string): string {
-    const { html, errors } = mjml2html(mjmlString, {
+    const result: any = mjml2html(mjmlString, {
       validationLevel: "soft",
     });
+    const { html, errors } = result;
 
-    if (errors.length > 0) {
-      console.warn(
+    if (errors && errors.length > 0) {
+      log.warn(
         "MJML Warnings:",
-        errors.map((e) => e.message),
+        errors.map((e: any) => e.message),
       );
 
       if (!html) {
@@ -129,14 +131,14 @@ export class MailerService {
     try {
       await this.send(to, subject, mjmlTemplate);
     } catch (error: any) {
-      console.error(`Non-blocking email failed to ${to}:`, error?.message);
+      log.error(`Non-blocking email failed to ${to}:`, error?.message);
     }
   }
 
   public async send(to: string, subject: string, mjmlTemplate: string) {
     try {
       if (!this.isRecipientAllowed(to)) {
-        console.info(
+        log.info(
           `[mailer] recipient guard: skipped email to "${to}" — only ${getConfig(
             "emailAllowedRecipients",
           ).join(", ")} are allowed in this environment.`,
@@ -163,14 +165,14 @@ export class MailerService {
 
         case "console":
         default:
-          console.info(
+          log.info(
             `[mailer:console] would send → to=${to} subject="${subject}" (${html.length} bytes). ` +
               "Configure EMAIL_PROVIDER + credentials to deliver.",
           );
           return { provider: "console", to, subject };
       }
     } catch (error: any) {
-      console.error(`Email Delivery Error to ${to}:`, error.message);
+      log.error(`Email Delivery Error to ${to}:`, error.message);
 
       const isProd = process.env.NODE_ENV === "production";
       const message = isProd
